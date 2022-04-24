@@ -1,15 +1,12 @@
-
-#include <string>
-#include <memory>
 #include <iostream>
+#include <memory>
+#include <string>
 
 #include "grpc/grpc.h"
 #include "grpcpp/security/server_credentials.h"
 #include "grpcpp/server.h"
 #include "grpcpp/server_builder.h"
-
 #include "src/server/greeter_server.h"
-
 
 void RunServer() {
   std::string server_address("0.0.0.0:50051");
@@ -24,7 +21,7 @@ void RunServer() {
   server->Wait();
 }
 
-int main(int argc, char** argv) {
+int main(int /*argc*/, char** /*argv*/) {
   RunServer();
 
   return 0;

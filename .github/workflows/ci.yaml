@@ -1,0 +1,140 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  buildifier:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Download Buildifier
+        run: |
+          curl --location --fail "https://github.com/bazelbuild/buildtools/releases/download/5.1.0/buildifier-linux-amd64" --output /tmp/buildifier
+          mkdir -p "${GITHUB_WORKSPACE}/bin/"
+          mv /tmp/buildifier "${GITHUB_WORKSPACE}/bin/buildifier"
+          chmod +x "${GITHUB_WORKSPACE}/bin/buildifier"
+      - name: Lint
+        run: |
+          "${GITHUB_WORKSPACE}/bin/buildifier" -mode diff -lint warn -r src/ WORKSPACE
+
+  clang-format:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - name: Check format
+        run: |
+          sudo apt-get update
+          sudo apt install -y clang-format || exit 2
+          cd ${GITHUB_WORKSPACE} || exit 3
+          git diff -U0 --no-color HEAD^ | clang-format-diff -style=google -p1
+          exit $?
+
+  clang-tidy:
+    runs-on: ubuntu-latest
+
+    needs: compile-commands
+
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install clang-tidy
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y clang-tidy
+    - name: Download compile commands
+      uses: actions/download-artifact@v3
+      with:
+        name: compile_commands
+        path: compile_commands.json
+    - name: Create results directory
+      run: |
+        mkdir clang-tidy-result
+    - name: Analyze
+      run: |
+        git diff -U0 HEAD^ | clang-tidy-diff -p1 -path compile_commands.json -export-fixes clang-tidy-result/fixes.yml
+    - name: Run clang-tidy-pr-comments action
+      uses: platisd/clang-tidy-pr-comments@master
+      with:
+        # The GitHub token (or a personal access token)
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        # The path to the clang-tidy fixes generated previously
+        clang_tidy_fixes: clang-tidy-result/fixes.yml
+        # Optionally set to true if you want the Action to request
+        # changes in case warnings are found
+        request_changes: true
+        # Optionally set the number of comments per review
+        # to avoid GitHub API timeouts for heavily loaded
+        # pull requests
+        suggestions_per_comment: 10
+
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2    
+
+    - name: Mount bazel cache
+      uses: actions/cache@v3
+      with:
+        path: "/home/runner/.cache/bazel"
+        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+        restore-keys: |
+          bazel-${{ hashFiles('./WORKSPACE')}}
+          bazel-
+    - name: Build
+      run: |
+        bazel build //src/...
+
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Mount bazel cache
+      uses: actions/cache@v3
+      with:
+        path: "/home/runner/.cache/bazel"
+        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+        restore-keys: |
+          bazel-${{ hashFiles('./WORKSPACE')}}
+          bazel-
+
+    - name: Test
+      run: |
+        bazel test //src/...
+
+  compile-commands:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Mount bazel cache
+      uses: actions/cache@v3
+      with:
+        path: "/home/runner/.cache/bazel"
+        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+        restore-keys: |
+          bazel-${{ hashFiles('./WORKSPACE')}}
+          bazel-
+
+    - name: Compile commands
+      run: |
+        bazel build //src/...
+        bazel run @hedron_compile_commands//:refresh_all
+
+    - name: Upload compile commands
+      uses: actions/upload-artifact@v3
+      with:
+        name: compile_commands
+        path: ./compile_commands.json

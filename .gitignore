@@ -31,8 +31,11 @@
 *.out
 *.app
 
-# Bazel
-bazel-*
-
 # VS Code
 .vscode
+
+# Bazel
+/external
+/bazel-*
+/compile_commands.json
+/.cache/
