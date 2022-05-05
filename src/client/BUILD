@@ -11,13 +11,13 @@ cc_binary(
 
 cc_library(
     name = "greeter_client",
-    hdrs = ["greeter_client.h"],
     srcs = [
-        "greeter_client.h",
         "greeter_client.cc",
+        "greeter_client.h",
     ],
+    hdrs = ["greeter_client.h"],
     deps = [
-        "@com_github_grpc_grpc//:grpc++",
         "//src/proto:greeter",
+        "@com_github_grpc_grpc//:grpc++",
     ],
 )

@@ -11,14 +11,26 @@ cc_binary(
 
 cc_library(
     name = "greeter_server",
-    hdrs = ["greeter_server.h"],
     srcs = [
-        "greeter_server.h",
         "greeter_server.cc",
+        "greeter_server.h",
+    ],
+    hdrs = ["greeter_server.h"],
+    deps = [
+        "//src/proto:greeter",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "greeter_server_test",
+    srcs = [
+        "greeter_server_test.cc",
     ],
     deps = [
-        "@com_google_absl//absl/strings",
-        "@com_github_grpc_grpc//:grpc++",
-        "//src/proto:greeter",
+        ":greeter_server",
+        "@googletest//:gtest",
+        "@googletest//:gtest_main",
     ],
 )

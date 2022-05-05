@@ -1,0 +1,2 @@
+build --cxxopt='-std=c++17' --action_env="GTEST_COLOR=1"
+test --action_env="GTEST_COLOR=1" --test_output=errors
