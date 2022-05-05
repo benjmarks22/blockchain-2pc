@@ -22,6 +22,12 @@ To run the client, run:
 
 `bazel run //src/client:greeter_client_main`
 
+## Testing
+
+To run all the tests, run:
+
+`bazel test //src/...`
+
 ## Formatting and static analysis
 
 ### Bazel files
