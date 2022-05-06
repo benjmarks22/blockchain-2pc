@@ -1,0 +1,68 @@
+// API for the client to interact with the coordinator.
+
+syntax = "proto3";
+
+package common;
+
+import "google/protobuf/timestamp.proto";
+
+message Namespace {
+  string identifier = 1;
+}
+
+message Get {
+  string key = 1;
+}
+
+message ScalarValue {
+  oneof type {
+    int64 int64_value = 1;
+    double double_value = 2;
+    string string_value = 3;
+  }
+}
+
+message Value {
+  // Values can either be from a get operation or a constant scalar value.
+  oneof type {
+    Get get_value = 1;
+    ScalarValue scalar_value = 2;
+  }
+}
+
+message Put {
+  string key = 1;
+  Value value = 2;
+}
+
+message Operation {
+  // The namespace identifying the cohort for this operation.
+  Namespace namespace = 1;
+  oneof type {
+    Get get = 2;
+    Put put = 3;
+  }
+}
+
+message Transaction {
+  // Each operation is run on a single cohort, but there can be multiple
+  // operations per cohort.
+  repeated Operation ops = 1;
+}
+
+// Configuration for processing the transaction.
+message TransactionConfig {
+  // The transaction will be presumed aborted if there is a blockchain block
+  // with a timestamp greater than or equal to this timestamp and the
+  // transaction has not yet been committed.
+  google.protobuf.Timestamp presumed_abort_time = 1;
+}
+
+// Empty response indicating the transaction is pending.
+message PendingResponse {}
+
+enum AbortReason {
+  ABORT_REASON_UNSPECIFIED = 0;
+  ABORT_REASON_PRESUMED_ABORT_TIMESTAMP_REACHED = 1;
+  ABORT_REASON_COHORT_SENT_ABORT_VOTE = 2;
+}

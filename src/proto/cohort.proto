@@ -1,0 +1,35 @@
+// API for the cohorts to process transactions from the coordinator.
+
+syntax = "proto3";
+
+package cohort;
+
+import "src/proto/common.proto";
+
+message PrepareTransactionRequest {
+  // Identifier for transaction within cohorts/coordinators. Globally unique
+  // across all requests for all clients. Client can use this to request status
+  // updates and to check the blockchain themselves.
+  string transaction_id = 1;
+  // All operations should have the namespace of the current cohort. Any
+  // operations for other namespaces can be ignored.
+  common.Transaction transaction = 2;
+  // Should be the final config updated by the coordinator.
+  common.TransactionConfig config = 3;
+}
+
+message PrepareTransactionResponse {
+  oneof status {
+    common.PendingResponse pending_response = 1;
+    common.AbortReason aborted_response = 2;
+  }
+}
+
+service Committer {
+  // Start preparing the transaction (e.g. request locks). Should not wait for
+  // the commit to be ready. Returns an abort response (with a reason) if it
+  // fails to acquire locks (or believes the abort timestamp to have passed)
+  // or pending if it acquired the locks.
+  rpc PrepareTransaction(PrepareTransactionRequest)
+      returns (PrepareTransactionResponse) {}
+}
