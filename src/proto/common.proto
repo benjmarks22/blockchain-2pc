@@ -6,28 +6,31 @@ package common;
 
 import "google/protobuf/timestamp.proto";
 
+// Identifies which cohort is responsible for executing the operation.
 message Namespace {
   string identifier = 1;
 }
 
+// Using a message to allow for extending to support multiple keys (e.g.
+// Get(StartsWith("foo"))).
 message Get {
+  // Scoped within the current namespace.
   string key = 1;
 }
 
-message ScalarValue {
+message ConstantValue {
   oneof type {
     int64 int64_value = 1;
     double double_value = 2;
     string string_value = 3;
+    // Can add more types here (e.g. bytes, lists, etc.)
   }
 }
 
 message Value {
-  // Values can either be from a get operation or a constant scalar value.
-  oneof type {
-    Get get_value = 1;
-    ScalarValue scalar_value = 2;
-  }
+  // Values can either be from a get operation or a constant value.
+  // Add support for Put("b", Get("a")) operations later.
+  ConstantValue constant_value = 1;
 }
 
 message Put {
@@ -65,4 +68,15 @@ enum AbortReason {
   ABORT_REASON_UNSPECIFIED = 0;
   ABORT_REASON_PRESUMED_ABORT_TIMESTAMP_REACHED = 1;
   ABORT_REASON_COHORT_SENT_ABORT_VOTE = 2;
+}
+
+message GetResponse {
+  Namespace namespace = 1;
+  Get get = 2;
+  ConstantValue value = 3;
+}
+
+message CommittedResponse {
+  // Each corresponds to a Get Operation in the transaction.
+  repeated GetResponse get_responses = 1;
 }

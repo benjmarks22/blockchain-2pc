@@ -31,6 +31,11 @@ message CommitAtomicTransactionResponse {
   common.TransactionConfig config = 2;
 }
 
+message AbortedResponse {
+  common.AbortReason reason = 1;
+  repeated common.Namespace namespaces = 2;
+}
+
 message GetTransactionResultRequest {
   // Identifier for transaction within cohorts/coordinators. Globally unique
   // across all requests for all clients. Client can use this to request status
@@ -38,25 +43,10 @@ message GetTransactionResultRequest {
   string transaction_id = 1;
 }
 
-message GetResponse {
-  common.Namespace namespace = 1;
-  common.Get get = 2;
-  common.Value value = 3;
-}
-
-message CommittedResponse {
-  repeated GetResponse get_responses = 1;
-}
-
-message AbortedResponse {
-  common.AbortReason reason = 1;
-  repeated common.Namespace namespaces = 2;
-}
-
 message GetTransactionResultResponse {
   oneof status {
     common.PendingResponse pending_response = 1;
-    CommittedResponse committed_response = 2;
+    common.CommittedResponse committed_response = 2;
     AbortedResponse aborted_response = 3;
   }
 }
