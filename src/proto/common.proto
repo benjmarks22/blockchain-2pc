@@ -21,16 +21,14 @@ message Get {
 message ConstantValue {
   oneof type {
     int64 int64_value = 1;
-    double double_value = 2;
-    string string_value = 3;
-    // Can add more types here (e.g. bytes, lists, etc.)
+    // Can add more types here (e.g. double, string, uint, bytes, lists, etc.).
   }
 }
 
 message NumericValue {
   oneof type {
     int64 int64_value = 1;
-    double double_value = 2;
+    // Can add more types here (e.g. double, uint, etc.).
   }
 }
 
@@ -40,7 +38,9 @@ message RelativeValue {
   // be 8.
   NumericValue relative_value = 1;
   // If the key does not have a value, consider it as if it had the default
-  // value. If the default value is also unset, abort and return not found.
+  // value. If the default value is also unset, aborts and returns not found.
+  // If the relative value is invalid for the current value type (e.g. current
+  // value is string), aborts and returns invalid type for relative put.
   NumericValue default_value = 2;
 }
 
@@ -109,6 +109,9 @@ enum AbortReason {
   // For Get operations with non-existent keys and Put operations with relative
   // values and non-existent keys.
   ABORT_REASON_OPERATION_FOR_NON_EXISTENT_VALUE = 3;
+  // For Put operations with relative value types that don't match the current
+  // value type (e.g. current type is int64 and relative value is double).
+  ABORT_REASON_RELATIVE_VALUE_INVALID_TYPE = 4;
 }
 
 message GetResponse {
