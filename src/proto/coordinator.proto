@@ -6,15 +6,11 @@ package coordinator;
 
 import "src/proto/common.proto";
 
-message ClientTransactionIdentifier {
-  // Unique for this client.
-  string transaction_id = 1;
-}
-
 message CommitAtomicTransactionRequest {
   // Used by the coordinator in case the client does not get the response and
-  // retries. Required.
-  ClientTransactionIdentifier id = 1;
+  // retries. Unique for this client and different from the transaction_id
+  // assigned by the coordinator. Required.
+  string client_transaction_id = 1;
   // Full transaction to commit. Required.
   common.Transaction transaction = 2;
   // Configuration for how to commit the transaction. Optional. If not
