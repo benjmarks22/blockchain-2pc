@@ -18,12 +18,9 @@ message PrepareTransactionRequest {
   common.TransactionConfig config = 3;
 }
 
-message PrepareTransactionResponse {
-  oneof status {
-    common.PendingResponse pending_response = 1;
-    common.AbortReason aborted_response = 2;
-  }
-}
+// This is just an acknowledgement that the transaction has been received and
+// does not need to be resent.
+message PrepareTransactionResponse {}
 
 message GetTransactionResultRequest {
   // Identifier for transaction within cohorts/coordinators. Globally unique
