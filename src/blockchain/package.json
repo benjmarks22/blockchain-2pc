@@ -3,6 +3,7 @@
     "version": "0.1.0",
     "private": true,
     "dependencies": {
+        "ganache": "latest",
         "truffle": "latest"
     },
     "devDependencies": {

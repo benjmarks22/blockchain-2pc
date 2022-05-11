@@ -11,28 +11,18 @@ Terms are:
 - Truffle: a development environment for Solidify contracts.
 - Ganache: a local blockchain simulator for Truffle to deploy to for testing.
 
-## Installation
-
-Install Truffle:
-
-```bash
-$ npm install -g truffle
-```
-
-Install Ganache: [link](https://trufflesuite.com/ganache/)
-
 ## Development
 
 ### Compile
 
 ```bash
-$ truffle compile
+$ bazel run //src/blockchain:compile_blockchain
 ```
 
 ### Test
 
 ```bash
-$ truffle test
+$ bazel test //src/blockchain:test_blockchain
 ```
 
 NOTE: Truffle supports writing tests in JavaScript which behaves more like an
@@ -41,19 +31,15 @@ integration test - we can consider this later.
 ### Deploy (on Truffle's dev network, can't interact with the contract)
 
 ```bash
-$ truffle develop
+$ bazel run //src/blockchain:deploy_truffle
 ...
 > migrate
 ```
 
 ### Deploy (on local Ganache, can interact with the contract)
 
-1. Launch Ganache > New > ... - Select `truffle-config.js` under this folder.
-2. `$ truffle migrate` to deploy the contracts.
-3. `$ truffle console` to interact with the contract. See below example:
-
 ```
-$ truffle console
+$ bazel run //src/blockchain:deploy_ganache
 truffle(development)> let contract = await TwoPhaseCommit.deployed();
 undefined
 truffle(development)> contract.getHeartBeat();
