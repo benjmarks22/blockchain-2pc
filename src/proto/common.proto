@@ -1,0 +1,114 @@
+// API for the client to interact with the coordinator.
+
+syntax = "proto3";
+
+package common;
+
+import "google/protobuf/timestamp.proto";
+
+// Identifies which cohort is responsible for executing the operation.
+message Namespace {
+  string identifier = 1;
+}
+
+// Using a message to allow for extending to support multiple keys (e.g.
+// Get(StartsWith("foo"))).
+message Get {
+  // Scoped within the current namespace.
+  string key = 1;
+}
+
+message ConstantValue {
+  oneof type {
+    int64 int64_value = 1;
+    // Can add more types here (e.g. double, string, uint, bytes, lists, etc.).
+  }
+}
+
+message NumericValue {
+  oneof type {
+    int64 int64_value = 1;
+    // Can add more types here (e.g. double, uint, etc.).
+  }
+}
+
+message RelativeValue {
+  // How much to increase the current value by.
+  // E.g. if the current value is 3 and relative_value is 5, the new value will
+  // be 8.
+  NumericValue relative_value = 1;
+  // If the key does not have a value, consider it as if it had the default
+  // value. If the default value is also unset, aborts and returns not found.
+  // If the relative value is invalid for the current value type (e.g. current
+  // value is string), aborts and returns invalid type for relative put.
+  NumericValue default_value = 2;
+}
+
+message Value {
+  // Values can either be from a get operation, a constant value, or a relative
+  // value.
+  // Add support for Put("b", Get("a")) operations later.
+  oneof type {
+    ConstantValue constant_value = 1;
+    RelativeValue relative_value = 2;
+  }
+}
+
+message Put {
+  string key = 1;
+  Value value = 2;
+}
+
+message Operation {
+  // The namespace identifying the cohort for this operation.
+  Namespace namespace = 1;
+  oneof type {
+    Get get = 2;
+    Put put = 3;
+  }
+}
+
+message Transaction {
+  // Each operation is run on a single cohort, but there can be multiple
+  // operations per cohort.
+  repeated Operation ops = 1;
+}
+
+// Configuration for processing the transaction.
+message TransactionConfig {
+  // The transaction will be presumed aborted if there is a blockchain block
+  // with a timestamp greater than or equal to this timestamp and the
+  // transaction has not yet been committed.
+  // TODO(benjmarks22): Describe the default when it is decided.
+  google.protobuf.Timestamp presumed_abort_time = 1;
+}
+
+// Empty response indicating the transaction is pending.
+message PendingResponse {}
+
+enum AbortReason {
+  // Should not be used.
+  ABORT_REASON_UNSPECIFIED = 0;
+  // If the server believes the presumed abort timestamp has already occurred.
+  ABORT_REASON_PRESUMED_ABORT_TIMESTAMP_REACHED = 1;
+  // If a Get operation key already has a write lock or a Put operation key
+  // already has a read or write lock.
+  ABORT_REASON_RESOURCE_LOCKED = 2;
+  // For Get operations with non-existent keys and Put operations with relative
+  // values and non-existent keys.
+  ABORT_REASON_OPERATION_FOR_NON_EXISTENT_VALUE = 3;
+  // For Put operations with relative value types that don't match the current
+  // value type (e.g. current type is int64 and relative value is double).
+  ABORT_REASON_RELATIVE_VALUE_INVALID_TYPE = 4;
+}
+
+message GetResponse {
+  Namespace namespace = 1;
+  Get get = 2;
+  ConstantValue value = 3;
+}
+
+message CommittedResponse {
+  // Each corresponds to a Get Operation in the transaction.
+  repeated GetResponse get_responses = 1;
+}

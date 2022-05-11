@@ -1,0 +1,53 @@
+// API for the cohorts to process transactions from the coordinator.
+
+syntax = "proto3";
+
+package cohort;
+
+import "src/proto/common.proto";
+
+message PrepareTransactionRequest {
+  // Identifier for transaction within cohorts/coordinators. Globally unique
+  // across all requests for all clients. Client can use this to request status
+  // updates and to check the blockchain themselves.
+  string transaction_id = 1;
+  // All operations should have the namespace of the current cohort. Any
+  // operations for other namespaces can be ignored.
+  common.Transaction transaction = 2;
+  // Should be the final config updated by the coordinator.
+  common.TransactionConfig config = 3;
+}
+
+// This is just an acknowledgement that the transaction has been received and
+// does not need to be resent.
+message PrepareTransactionResponse {}
+
+message GetTransactionResultRequest {
+  // Identifier for transaction within cohorts/coordinators. Globally unique
+  // across all requests for all clients. Client can use this to request status
+  // updates and to check the blockchain themselves.
+  string transaction_id = 1;
+}
+
+message GetTransactionResultResponse {
+  oneof status {
+    common.PendingResponse pending_response = 1;
+    common.CommittedResponse committed_response = 2;
+    common.AbortReason aborted_response = 3;
+  }
+}
+
+service Cohort {
+  // Start preparing the transaction (e.g. request locks). Should not wait for
+  // the commit to be ready. Returns an abort response (with a reason) if it
+  // fails to acquire locks (or believes the abort timestamp to have passed)
+  // or pending if it acquired the locks.
+  rpc PrepareTransaction(PrepareTransactionRequest)
+      returns (PrepareTransactionResponse) {}
+
+  // Get the current result of a previously submitted transaction.
+  // Possible results are pending, aborted (with reason for aborting and which
+  // servers failed), and committed (with results for all get ops).
+  rpc GetTransactionResult(GetTransactionResultRequest)
+      returns (GetTransactionResultResponse) {}
+}

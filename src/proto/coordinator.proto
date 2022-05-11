@@ -1,0 +1,60 @@
+// API for the client to interact with the coordinator.
+
+syntax = "proto3";
+
+package coordinator;
+
+import "src/proto/common.proto";
+
+message CommitAtomicTransactionRequest {
+  // Used by the coordinator in case the client does not get the response and
+  // retries. Unique for this client and different from the transaction_id
+  // assigned by the coordinator. Required.
+  string client_transaction_id = 1;
+  // Full transaction to commit. Required.
+  common.Transaction transaction = 2;
+  // Configuration for how to commit the transaction. Optional. If not
+  // provided, the coordinator will use reasonable defaults.
+  common.TransactionConfig config = 3;
+}
+
+message CommitAtomicTransactionResponse {
+  // Identifier for transaction within cohorts/coordinators. Globally unique
+  // across all requests for all clients. Client can use this to request status
+  // updates and to check the blockchain themselves.
+  string transaction_id = 1;
+  // Includes abort time.
+  common.TransactionConfig config = 2;
+}
+
+message AbortedResponse {
+  common.AbortReason reason = 1;
+  repeated common.Namespace namespaces = 2;
+}
+
+message GetTransactionResultRequest {
+  // Identifier for transaction within cohorts/coordinators. Globally unique
+  // across all requests for all clients. Client can use this to request status
+  // updates and to check the blockchain themselves.
+  string transaction_id = 1;
+}
+
+message GetTransactionResultResponse {
+  oneof status {
+    common.PendingResponse pending_response = 1;
+    common.CommittedResponse committed_response = 2;
+    AbortedResponse aborted_response = 3;
+  }
+}
+
+service Coordinator {
+  // Atomically commit a transaction on behalf of a client.
+  rpc CommitAtomicTransaction(CommitAtomicTransactionRequest)
+      returns (CommitAtomicTransactionResponse) {}
+
+  // Get the current result of a previously submitted transaction.
+  // Possible results are pending, aborted (with reason for aborting and which
+  // servers failed), and committed (with results for all get ops).
+  rpc GetTransactionResult(GetTransactionResultRequest)
+      returns (GetTransactionResultResponse) {}
+}
