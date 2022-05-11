@@ -1,0 +1,17 @@
+{
+    "name": "blockchain",
+    "version": "0.1.0",
+    "private": true,
+    "dependencies": {
+        "truffle": "latest"
+    },
+    "devDependencies": {
+        "@bazel/bazelisk": "latest",
+        "@bazel/ibazel": "latest",
+        "@bazel/buildifier": "latest"
+    },
+    "scripts": {
+        "build": "bazel build //src/blockchain/...",
+        "test": "bazel test //src/blockchain/..."
+    }
+}

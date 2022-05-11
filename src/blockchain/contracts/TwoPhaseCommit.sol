@@ -2,7 +2,7 @@
 pragma solidity >=0.4.22 <0.9.0;
 
 contract TwoPhaseCommit {
-  constructor() {
+  constructor() public {
   }
 
   function getHeartBeat() public pure returns(bool) {
