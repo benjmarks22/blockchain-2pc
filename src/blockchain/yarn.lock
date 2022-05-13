@@ -3081,7 +3081,7 @@ functions-have-names@^1.2.2:
   resolved "https://registry.yarnpkg.com/functions-have-names/-/functions-have-names-1.2.3.tgz#0404fe4ee2ba2f607f0e0ec3c80bae994133b834"
   integrity sha512-xckBUXyTIqT97tq2x2AMb+g163b5JFysYk0x4qxNFwbfQkmNZoiRHb6sPzI9/QV33WeuvVYBUIiD4NzNIyqaRQ==
 
-ganache@^7.1.0:
+ganache@^7.1.0, ganache@latest:
   version "7.1.0"
   resolved "https://registry.yarnpkg.com/ganache/-/ganache-7.1.0.tgz#f38287ae86c415d0a62b762faaef4732811e89e7"
   integrity sha512-f794GTIxHcb9o889GOh0Ad6/Q09nsNhJtN11oi8m+nxsuPHkkMNaGRHav3hApZLY3GPrSBT3XIKlDIUFxcBq8g==

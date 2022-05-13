@@ -81,18 +81,6 @@ message TransactionConfig {
   // transaction has not yet been committed.
   // TODO(benjmarks22): Describe the default when it is decided.
   google.protobuf.Timestamp presumed_abort_time = 1;
-  // This is the number of blocks in the blockchain that must have the
-  // transaction to consider it committed. If only one block is required, then
-  // it is possible for some cohorts to see a verified block with the
-  // transaction right before the presumed_abort_time/timeout and others to see
-  // a different block that did not include the transaction. For example, if
-  // the abort timestamp is t=3, and cohort A sees a block B with the committed
-  // transaction and timestamp t=2, and cohort B sees a block B' at t=4 without
-  // the committed transaction, cohort A will commit the transaction while
-  // cohort B will abort it. Clients can specify how important it is that the
-  // commit truly be atomic by increasing this for valuable transactions.
-  // Defaults to 1 if not set by the client.
-  uint64 num_confirmation_blocks = 2;
 }
 
 // Empty response indicating the transaction is pending.
