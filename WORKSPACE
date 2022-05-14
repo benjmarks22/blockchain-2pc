@@ -1,4 +1,5 @@
 load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 git_repository(
@@ -36,3 +37,18 @@ git_repository(
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 
 hedron_compile_commands_setup()
+
+http_archive(
+    name = "lmdb", 
+    build_file = "lmdb.BUILD",
+    # From https://github.com/LMDB/lmdb/tags
+    strip_prefix = "lmdb-LMDB_0.9.29/libraries/liblmdb",
+    urls = ["https://github.com/LMDB/lmdb/archive/LMDB_0.9.29.tar.gz"],
+)
+
+new_git_repository(
+    name = "com_drycpp_lmdbxx",
+    branch = "master",
+    build_file = "lmdbxx.BUILD",
+    remote = "https://github.com/drycpp/lmdbxx.git",
+)
