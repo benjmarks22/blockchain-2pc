@@ -17,7 +17,6 @@
 
 #include <cstdio>
 #include <cstdlib>
-#include <filesystem>
 
 #include "absl/flags/flag.h"
 #include "lmdbxx/lmdb++.h"

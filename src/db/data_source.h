@@ -7,6 +7,7 @@
 namespace db {
 
 // Abstract Database Interface that supports transaction operations.
+// TODO(n-triple-a): Implement interface using LMDB primitives
 class DataSource {
  public:
   DataSource() = default;
@@ -17,7 +18,7 @@ class DataSource {
 
   // Begins a transaction.
   virtual grpc::Status Begin();
-  
+
   // Commits a transaction.
   virtual grpc::Status Commit();
 
