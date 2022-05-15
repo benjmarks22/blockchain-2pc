@@ -4,7 +4,8 @@
     "private": true,
     "dependencies": {
         "ganache": "latest",
-        "truffle": "latest"
+        "truffle": "latest",
+        "sqlite3": "latest"
     },
     "devDependencies": {
         "@bazel/bazelisk": "latest",
