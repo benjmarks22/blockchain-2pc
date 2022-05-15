@@ -18,8 +18,9 @@ function install () {
 
 BINARY_DIR="/usr/local/bin"
 sudo apt-get update || exit 2
-sudo apt-get install -y clang-format clang-tidy curl git gcc g++ python3 || exit 3
+sudo apt-get install -y clang-format clang-tidy curl git gcc g++ python3 python3-pip || exit 3
 install ${BINARY_DIR} bazel "https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64"
 install ${BINARY_DIR} buildifier "https://github.com/bazelbuild/buildtools/releases/download/5.1.0/buildifier-linux-amd64"
 python3 -m pip install pre-commit
+export PATH="$PATH:~/.local/bin/"   # pre-commit might not locate in $PATH already.
 pre-commit install
