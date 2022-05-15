@@ -1,6 +1,9 @@
 cc_library(
     name = "data_source",
     hdrs = ["data_source.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+    ],
 )
 
 cc_binary(
@@ -10,6 +13,6 @@ cc_binary(
     ],
     deps = [
         "@com_drycpp_lmdbxx//:lmdb++",
-        "@com_google_absl//absl/flags:flag"
+        "@com_google_absl//absl/flags:flag",
     ],
 )

@@ -4,6 +4,8 @@
 
 #include <string>
 
+#include "absl/status/status.h"
+
 namespace db {
 
 // Abstract Database Interface that supports transaction operations.
@@ -14,16 +16,16 @@ class DataSource {
   ~DataSource() = default;
   
   // Connects to the database instance.
-  virtual grpc::Status Connect();
+  virtual absl::Status Connect();
 
   // Begins a transaction.
-  virtual grpc::Status Begin();
+  virtual absl::Status Begin();
 
   // Commits a transaction.
-  virtual grpc::Status Commit();
+  virtual absl::Status Commit();
 
   // Aborts a transaction.
-  virtual grpc::Status Abort();
+  virtual absl::Status Abort();
 
   // Gets the value from the database with input |key|.
   // It assumes a transaction is already opened with Begin.

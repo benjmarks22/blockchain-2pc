@@ -1,19 +1,21 @@
 // Example binary to test basic functionality of LMDB.
 //
-// It is a rewriten version of https://github.com/drycpp/lmdbxx/blob/master/example.cc
-// Example cmd: 
+// It is a rewriten version of
+//   https://github.com/drycpp/lmdbxx/blob/master/example.cc
+// Example cmd:
 //   mkdir /tmp/lmdb
 //   bazel run lmdb_raw_lib_example_main -- --db_dir=/tmp/lmdb
 //
 // Example output:
 //   ====================Program Starts====================
-//   Get within a txn: 'hacker@example.org' 
-//   Get commited value via a write txn: 'hacker@example.org' 
-//   Readonly txn w/ cursor: 
+//   Get within a txn: 'hacker@example.org'
+//   Get commited value via a write txn: 'hacker@example.org'
+//   Readonly txn w/ cursor:
 //   key: 'email', value: 'jhacker@example.org'
 //   key: 'fullname', value: 'J. Random Hacker'
 //   key: 'username', value: 'jhacker'
 
+#include <sys/stat.h>
 
 #include <cstdio>
 #include <cstdlib>
@@ -29,8 +31,10 @@ int main() {
   // Create and open the LMDB environment
   std::printf("\n====================Program Starts====================\n");
   lmdb::env env = lmdb::env::create();
-  env.set_mapsize(1UL * 1024UL * 1024UL * 1024UL); // 1 GiB
-  env.open(absl::GetFlag(FLAGS_db_dir).c_str(), 0, 0664);
+  const uint64_t mapsize = 1UL * 1024UL * 1024UL * 1024UL;  // 1 GiB
+  env.set_mapsize(mapsize);
+  const mdb_mode_t file_open_mode = (S_IRUSR | S_IWUSR);
+  env.open(absl::GetFlag(FLAGS_db_dir).c_str(), 0, file_open_mode);
 
   // Insert some key/value pairs and get tmp value in a write transaction.
   lmdb::txn wtxn = lmdb::txn::begin(env);
@@ -48,7 +52,8 @@ int main() {
   lmdb::dbi dbi_get_only = lmdb::dbi::open(wtxn_get_only, nullptr);
   std::string email_val_get_only;
   dbi_get_only.get(wtxn_get_only, "email", email_val_get_only);
-  std::printf("Get commited value via a write txn: '%s' \n", email_val_get_only.c_str());
+  std::printf("Get commited value via a write txn: '%s' \n",
+              email_val_get_only.c_str());
   wtxn_get_only.commit();
 
   // Fetch key/value pairs in a read-only transaction
