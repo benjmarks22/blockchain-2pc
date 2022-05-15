@@ -8,6 +8,16 @@ To install the tools necessary for the project, run
 
 `bash setup.sh`
 
+### Docker
+
+To install in Docker, run
+
+`docker build -t image:latest ./`
+
+To run commands in Docker, run
+
+`docker run -i -t image:latest bash`
+
 ## Running the server and client
 
 ### Server
@@ -38,7 +48,7 @@ To format `BUILD` files and `WORKSPACE`, run:
 
 To format all Bazel files, run:
 
-`buildifier -mode diff -lint warn -r src/ WORKSPACE`
+`buildifier -mode fix -lint warn -r src/ WORKSPACE`
 
 ### C++ and proto files
 
