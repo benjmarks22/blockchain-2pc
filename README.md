@@ -38,7 +38,7 @@ To format `BUILD` files and `WORKSPACE`, run:
 
 To format all Bazel files, run:
 
-`buildifier -mode diff -lint warn -r src/ WORKSPACE`
+`buildifier -mode fix -lint warn -r src/ WORKSPACE`
 
 ### C++ and proto files
 

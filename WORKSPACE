@@ -22,9 +22,15 @@ http_archive(
 )
 
 git_repository(
-    name = "googletest",
+    name = "com_google_googletest",
     commit = "e2239ee6043f73722e7aa812a459f54a28552929",
     remote = "https://github.com/google/googletest",
+)
+
+git_repository(
+    name = "protobuf_matchers",
+    commit = "7c8e15741bcea83db7819cc472c3e96301a95158",
+    remote = "https://github.com/inazarenko/protobuf-matchers",
 )
 
 git_repository(
