@@ -71,3 +71,9 @@ To run static analysis, run:
 To fix static analysis errors for all changed lines, change the third command to
 
 `git diff -U0 HEAD^ | clang-tidy-diff -fix -p1 -path compile_commands.json`
+
+### Solidity
+
+To format all solidity files:
+
+`npx prettier --write 'src/blockchain/contracts/**/*.sol' 'src/blockchain/test/**/*.sol'`
