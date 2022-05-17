@@ -76,4 +76,4 @@ To fix static analysis errors for all changed lines, change the third command to
 
 To format all solidity files:
 
-`npx prettier --write 'src/blockchain/contracts/**/*.sol' 'src/blockchain/test/**/*.sol'  --plugin=prettier-plugin-solidity`
+`prettier --plugin-search-dir=src/blockchain --write 'src/blockchain/**/**/*.sol'`
