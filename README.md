@@ -8,6 +8,16 @@ To install the tools necessary for the project, run
 
 `bash setup.sh`
 
+### Docker
+
+To install in Docker, run
+
+`docker build -t image:latest ./`
+
+To run commands in Docker, run
+
+`docker run -i -t image:latest bash`
+
 ## Running the server and client
 
 ### Server
@@ -61,3 +71,9 @@ To run static analysis, run:
 To fix static analysis errors for all changed lines, change the third command to
 
 `git diff -U0 HEAD^ | clang-tidy-diff -fix -p1 -path compile_commands.json`
+
+### Solidity
+
+To format all solidity files:
+
+`prettier --plugin-search-dir=src/blockchain --write 'src/blockchain/**/**/*.sol'`

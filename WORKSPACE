@@ -27,6 +27,27 @@ git_repository(
     remote = "https://github.com/google/googletest",
 )
 
+http_archive(
+    name = "build_bazel_rules_nodejs",
+    sha256 = "e328cb2c9401be495fa7d79c306f5ee3040e8a03b2ebb79b022e15ca03770096",
+    urls = ["https://github.com/bazelbuild/rules_nodejs/releases/download/5.4.2/rules_nodejs-5.4.2.tar.gz"],
+)
+
+load("@build_bazel_rules_nodejs//:repositories.bzl", "build_bazel_rules_nodejs_dependencies")
+
+build_bazel_rules_nodejs_dependencies()
+
+# The yarn_install rule runs yarn anytime the package.json or yarn.lock file changes.
+# It also extracts and installs any Bazel rules distributed in an npm package.
+load("@build_bazel_rules_nodejs//:index.bzl", "yarn_install")
+
+yarn_install(
+    name = "blockchain_npm",
+    frozen_lockfile = False,
+    package_json = "//src/blockchain:package.json",
+    yarn_lock = "//src/blockchain:yarn.lock",
+)
+
 git_repository(
     name = "protobuf_matchers",
     commit = "7c8e15741bcea83db7819cc472c3e96301a95158",
