@@ -1,4 +1,4 @@
-load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository")
+load("@bazel_tools//tools/build_defs/repo:git.bzl", "git_repository", "new_git_repository")
 load("@bazel_tools//tools/build_defs/repo:http.bzl", "http_archive")
 
 git_repository(
@@ -46,6 +46,24 @@ yarn_install(
     frozen_lockfile = False,
     package_json = "//src/blockchain:package.json",
     yarn_lock = "//src/blockchain:yarn.lock",
+)
+
+new_git_repository(
+    name = "thread_pool",
+    build_file_content = """
+cc_library(
+    name = "thread_pool",
+    srcs = [
+        "thread_pool.hpp",
+    ],
+    hdrs = [
+        "thread_pool.hpp",
+    ],
+    visibility = ["//visibility:public",],
+)
+""",
+    commit = "b6cd773f37b1be7718f771ae7403726a28be5f40",
+    remote = "https://github.com/bshoshany/thread-pool",
 )
 
 git_repository(

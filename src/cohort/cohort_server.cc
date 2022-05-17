@@ -1,32 +1,55 @@
 #include "src/cohort/cohort_server.h"
 
 #include "absl/status/statusor.h"
+#include "absl/time/time.h"
 #include "grpcpp/server_context.h"
 #include "src/proto/cohort.grpc.pb.h"
 #include "src/utils/grpc_utils.h"
 
 namespace cohort {
 
-using grpc::ServerContext;
+namespace {
 
-absl::Status CohortServer::StartWork(const PrepareTransactionRequest &request) {
-  // TODO(benjmarks22): Create a fiber and start the transaction.
-  results_by_transaction_id_[request.transaction_id()]
-      .mutable_pending_response();
-  return absl::OkStatus();
+using ::grpc::ServerContext;
+
+std::chrono::time_point<std::chrono::system_clock> FromProtoTimestamp(
+    const google::protobuf::Timestamp &timestamp) {
+  return absl::ToChronoTime(absl::FromUnixSeconds(timestamp.seconds()) +
+                            absl::Nanoseconds(timestamp.nanos()));
+}
+
+}  // namespace
+
+GetTransactionResultResponse CohortServer::Begin(
+    const PrepareTransactionRequest & /*request*/) {
+  auto response = GetTransactionResultResponse();
+  response.mutable_pending_response();
+  // TODO(benjmarks22): Interact with the database to set the response.
+  // TODO(benjmarks22): Vote in the blockchain based on the database response.
+  return response;
 }
 
 grpc::Status CohortServer::PrepareTransaction(
-    grpc::ServerContext * /*context*/, const PrepareTransactionRequest *request,
+    ServerContext * /*context*/, const PrepareTransactionRequest *request,
     PrepareTransactionResponse * /*response*/) {
-  return utils::FromAbslStatus(StartWork(*request));
+  results_by_transaction_id_[request->transaction_id()].config =
+      request->config();
+  results_by_transaction_id_[request->transaction_id()].future =
+      thread_pool_.submit([this, request]() { return Begin(*request); });
+  return grpc::Status::OK;
 }
 
 grpc::Status CohortServer::GetTransactionResult(
-    grpc::ServerContext * /*context*/,
-    const GetTransactionResultRequest *request,
+    ServerContext * /*context*/, const GetTransactionResultRequest *request,
     GetTransactionResultResponse *response) {
-  *response = results_by_transaction_id_[request->transaction_id()];
+  const auto time =
+      FromProtoTimestamp(results_by_transaction_id_[request->transaction_id()]
+                             .config.presumed_abort_time());
+  if (results_by_transaction_id_[request->transaction_id()].future.wait_until(
+          time) == std::future_status::ready) {
+    *response =
+        results_by_transaction_id_[request->transaction_id()].future.get();
+  }
   return grpc::Status::OK;
 }
 
