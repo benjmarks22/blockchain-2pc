@@ -30,4 +30,5 @@ install ${BINARY_DIR} bazel "https://github.com/bazelbuild/bazelisk/releases/dow
 install ${BINARY_DIR} buildifier "https://github.com/bazelbuild/buildtools/releases/download/5.1.0/buildifier-linux-amd64"
 $SUDO npm install -g prettier
 python3 -m pip install pre-commit
+export PATH="$PATH:~/.local/bin/"   # pre-commit might not locate in $PATH already.
 pre-commit install
