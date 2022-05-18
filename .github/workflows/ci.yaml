@@ -48,11 +48,11 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "/home/runner/.cache/bazel"
-        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
+        key: bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
         restore-keys: |
-          bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
-          bazel-${{ hashFiles('./WORKSPACE')}}
-          bazel-
+          bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+          bazel_${{ hashFiles('./WORKSPACE')}}
+          bazel_
 
     - name: Build
       run: |
@@ -100,11 +100,11 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "/home/runner/.cache/bazel"
-        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
+        key: bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
         restore-keys: |
-          bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
-          bazel-${{ hashFiles('./WORKSPACE')}}
-          bazel-
+          bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+          bazel_${{ hashFiles('./WORKSPACE')}}
+          bazel_
 
     - name: Build
       run: |
@@ -120,11 +120,11 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "/home/runner/.cache/bazel"
-        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
+        key: bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
         restore-keys: |
-          bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
-          bazel-${{ hashFiles('./WORKSPACE')}}
-          bazel-
+          bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+          bazel_${{ hashFiles('./WORKSPACE')}}
+          bazel_
 
     - name: Test
       run: |
