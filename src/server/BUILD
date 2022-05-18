@@ -30,7 +30,7 @@ cc_test(
     ],
     deps = [
         ":greeter_server",
-        "@googletest//:gtest",
-        "@googletest//:gtest_main",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
     ],
 )
