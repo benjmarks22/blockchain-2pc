@@ -107,3 +107,30 @@ filegroup(
     name = "truffle-config",
     srcs = ["truffle-config.js"],
 )
+
+cc_library(
+    name = "two_phase_commit",
+    srcs = [
+        "two_phase_commit.cc",
+        "two_phase_commit.h",
+    ],
+    hdrs = ["two_phase_commit.h"],
+    deps = [
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+    ],
+)
+
+cc_test(
+    name = "two_phase_commit_test",
+    srcs = [
+        "two_phase_commit_test.cc",
+    ],
+    deps = [
+        ":two_phase_commit",
+        "@com_google_absl//absl/status",
+        "@com_google_googletest//:gtest",
+        "@com_google_googletest//:gtest_main",
+    ],
+)
