@@ -27,7 +27,6 @@ ABSL_FLAG(std::string, db_dir, "/tmp/lmdb",
           "Database dir for lmdb to temporarily store data."
           "Please create your own dir and pass a absolute path.");
 
-
 bool put(lmdb::dbi &dbi, lmdb::txn &txn, const std::string &key,
          const std::string &value) {
   auto val = lmdb::val(value);
