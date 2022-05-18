@@ -48,8 +48,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "/home/runner/.cache/bazel"
-        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
         restore-keys: |
+          bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
           bazel-${{ hashFiles('./WORKSPACE')}}
           bazel-
 
@@ -99,8 +100,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "/home/runner/.cache/bazel"
-        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
         restore-keys: |
+          bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
           bazel-${{ hashFiles('./WORKSPACE')}}
           bazel-
 
@@ -118,8 +120,9 @@ jobs:
       uses: actions/cache@v3
       with:
         path: "/home/runner/.cache/bazel"
-        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+        key: bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
         restore-keys: |
+          bazel-${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
           bazel-${{ hashFiles('./WORKSPACE')}}
           bazel-
 
