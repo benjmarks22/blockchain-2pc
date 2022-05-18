@@ -27,6 +27,23 @@ ABSL_FLAG(std::string, db_dir, "/tmp/lmdb",
           "Database dir for lmdb to temporarily store data."
           "Please create your own dir and pass a absolute path.");
 
+
+bool put(lmdb::dbi &dbi, lmdb::txn &txn, const std::string &key,
+         const std::string &value) {
+  auto val = lmdb::val(value);
+  return dbi.put(txn, lmdb::val(key), val);
+}
+
+bool get(lmdb::dbi &dbi, lmdb::txn &txn, const std::string &key,
+         std::string &value) {
+  lmdb::val val;
+  if (!dbi.get(txn, lmdb::val(key), val)) {
+    return false;
+  }
+  value = std::string(val.data(), val.data() + val.size());
+  return true;
+}
+
 int main() {
   // Create and open the LMDB environment
   std::printf("\n====================Program Starts====================\n");
@@ -39,11 +56,11 @@ int main() {
   // Insert some key/value pairs and get tmp value in a write transaction.
   lmdb::txn wtxn = lmdb::txn::begin(env);
   lmdb::dbi dbi = lmdb::dbi::open(wtxn, nullptr);
-  dbi.put(wtxn, "username", "jhacker");
-  dbi.put(wtxn, "email", "jhacker@example.org");
-  dbi.put(wtxn, "fullname", "J. Random Hacker");
+  put(dbi, wtxn, "username", "jhacker");
+  put(dbi, wtxn, "email", "jhacker@example.org");
+  put(dbi, wtxn, "fullname", "J. Random Hacker");
   std::string email_val;
-  dbi.get(wtxn, "email", email_val);
+  get(dbi, wtxn, "email", email_val);
   std::printf("Get within a txn: '%s' \n", email_val.c_str());
   wtxn.commit();
 
@@ -51,7 +68,7 @@ int main() {
   lmdb::txn wtxn_get_only = lmdb::txn::begin(env);
   lmdb::dbi dbi_get_only = lmdb::dbi::open(wtxn_get_only, nullptr);
   std::string email_val_get_only;
-  dbi_get_only.get(wtxn_get_only, "email", email_val_get_only);
+  get(dbi_get_only, wtxn_get_only, "email", email_val_get_only);
   std::printf("Get commited value via a write txn: '%s' \n",
               email_val_get_only.c_str());
   wtxn_get_only.commit();

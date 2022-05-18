@@ -35,3 +35,10 @@ repos:
         files: '\.h$|\.cc$|\.proto$'
         language: system
         pass_filenames: false
+    -   id: prettier
+        name: prettier
+        description: Runs `prettier`, requires prettier package.
+        entry: prettier --plugin-search-dir=src/blockchain --check 'src/blockchain/**/**/*.sol'
+        files: '\.sol$'
+        language: system
+        pass_filenames: false

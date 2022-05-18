@@ -8,7 +8,10 @@ Checks: >
   performance-*,
   portability-*,
   readability-*,
+  -readability-convert-member-functions-to-static,
   -modernize-use-trailing-return-type,
+  -google-runtime-references,
+  -readability-magic-numbers,
 
 # Turn all the warnings from the checks above into errors.
 WarningsAsErrors: "*"
