@@ -26,6 +26,7 @@ cc_test(
     srcs = [
         "lmdb_data_source_test.cc",
     ],
+    shard_count = 2,
     deps = [
         ":lmdb_data_source",
         "@com_google_absl//absl/status",
