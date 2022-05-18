@@ -81,8 +81,8 @@ absl::Status LMDBDataSource::Put(const std::string& key, int64_t value) {
 }
 
 void LMDBDataSource::ReleaseTransaction() {
-  txn_.release();
-  dbi_.release();
+  txn_.reset(nullptr);
+  dbi_.reset(nullptr);
 }
 
 }  // namespace db
