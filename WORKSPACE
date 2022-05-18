@@ -78,6 +78,21 @@ git_repository(
     remote = "https://github.com/hedronvision/bazel-compile-commands-extractor",
 )
 
+http_archive(
+    name = "lmdb",
+    build_file = "//third_party:lmdb.BUILD",
+    # From https://github.com/LMDB/lmdb/tags
+    strip_prefix = "lmdb-LMDB_0.9.29/libraries/liblmdb",
+    urls = ["https://github.com/LMDB/lmdb/archive/LMDB_0.9.29.tar.gz"],
+)
+
+new_git_repository(
+    name = "com_drycpp_lmdbxx",
+    branch = "master",
+    build_file = "//third_party:lmdbxx.BUILD",
+    remote = "https://github.com/drycpp/lmdbxx.git",
+)
+
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 
 hedron_compile_commands_setup()
