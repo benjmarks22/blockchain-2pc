@@ -75,20 +75,22 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   LMDBDatabaseTransactionAdapter db_txn_adapter1("/tmp");
 
   // Txn1 to Put `key1` and `key2`.
-  LOG(INFO) << "LOG: Start initialzing values. Duration: "
+  LOG(INFO) << "LOG: Start initialzing values with txn1. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   ASSERT_EQ(db_txn_adapter1.Begin().code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Put(key1, 1).code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Put(key2, 2).code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Commit().code(), absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: Initialzation commited. Duration: "
+  LOG(INFO) << "LOG: Initialzation commited with txn1. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
   LMDBDatabaseTransactionAdapter db_txn_adapter2("/tmp");
   LMDBDatabaseTransactionAdapter db_txn_adapter3("/tmp");
   ASSERT_EQ(db_txn_adapter2.Begin().code(), absl::StatusCode::kOk);
+  LOG(INFO) << "LOG: Concurrent txn 2 Begin. Duration: "
+            << float(clock() - begin_time) / CLOCKS_PER_SEC;
   ASSERT_EQ(db_txn_adapter3.Begin().code(), absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: Concurrent txn 2&3 Begin. Duration: "
+  LOG(INFO) << "LOG: Concurrent txn 3 Begin. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
   int64_t txn2_got_value;
