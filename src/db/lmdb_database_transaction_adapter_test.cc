@@ -2,6 +2,7 @@
 
 #include <ctime>
 
+#include "glog/logging.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -74,20 +75,20 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   LMDBDatabaseTransactionAdapter db_txn_adapter1("/tmp");
 
   // Txn1 to Put `key1` and `key2`.
-  std::cout << "LOG: Start initialzing values. Duration: "
+  LOG(INFO) << "LOG: Start initialzing values. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   ASSERT_EQ(db_txn_adapter1.Begin().code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Put(key1, 1).code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Put(key2, 2).code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Commit().code(), absl::StatusCode::kOk);
-  std::cout << "LOG: Initialzation commited. Duration: "
+  LOG(INFO) << "LOG: Initialzation commited. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
   LMDBDatabaseTransactionAdapter db_txn_adapter2("/tmp");
   LMDBDatabaseTransactionAdapter db_txn_adapter3("/tmp");
   ASSERT_EQ(db_txn_adapter2.Begin().code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter3.Begin().code(), absl::StatusCode::kOk);
-  std::cout << "LOG: Concurrent txn 2&3 Begin. Duration: "
+  LOG(INFO) << "LOG: Concurrent txn 2&3 Begin. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
   int64_t txn2_got_value;
@@ -96,41 +97,41 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   // db_txn_adapter2 Gets key2 then Puts key1
   // db_txn_adapter3 Puts key2 then Gets key1
   // Both adapters do not commit.
-  std::cout << "LOG: txn 2 gets key2. Duration: "
+  LOG(INFO) << "LOG: txn 2 gets key2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter2.Get(key2, txn2_got_value).code(),
             absl::StatusCode::kOk);
-  std::cout << "LOG: txn 3 puts key2. Duration: "
+  LOG(INFO) << "LOG: txn 3 puts key2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter3.Put(key2, 7).code(), absl::StatusCode::kOk);
-  std::cout << "LOG: txn 2 puts key1. Duration: "
+  LOG(INFO) << "LOG: txn 2 puts key1. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter2.Put(key1, 5).code(), absl::StatusCode::kOk);
-  std::cout << "LOG: txn 3 gets key1. Duration: "
+  LOG(INFO) << "LOG: txn 3 gets key1. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter3.Get(key1, txn3_got_value).code(),
             absl::StatusCode::kOk);
-  std::cout << "LOG: txn 3 puts key1. Duration: "
+  LOG(INFO) << "LOG: txn 3 puts key1. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter3.Put(key1, txn3_got_value + 10).code(),
             absl::StatusCode::kOk);
 
   // LMDB treat both txns to operate on a view when the txn starts.
   // Both Commmits are OK.
-  std::cout << "LOG: Commiting txn 2. Duration: "
+  LOG(INFO) << "LOG: Commiting txn 2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter2.Commit().code(), absl::StatusCode::kOk);
-  std::cout << "LOG: Commiting txn 3. Duration: "
+  LOG(INFO) << "LOG: Commiting txn 3. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter3.Commit().code(), absl::StatusCode::kOk);
-  std::cout << "LOG: txn 2 & 3 commited. Duration: "
+  LOG(INFO) << "LOG: txn 2 & 3 commited. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
   EXPECT_EQ(txn2_got_value, 2);
   EXPECT_EQ(txn3_got_value, 1);
 
   // Read the current value of key1 and key2
-  std::cout << "LOG: Starting txn 4 to read commited values. Duration: "
+  LOG(INFO) << "LOG: Starting txn 4 to read commited values. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   ASSERT_EQ(db_txn_adapter1.Begin().code(), absl::StatusCode::kOk);
   int64_t key1_val;
@@ -142,7 +143,7 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   // Later commited txn will overwrite the related keys.
   EXPECT_EQ(key1_val, 11);
   EXPECT_EQ(key2_val, 7);
-  std::cout << "LOG: txn 4 commited. Duration: "
+  LOG(INFO) << "LOG: txn 4 commited. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 }
 
