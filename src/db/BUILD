@@ -1,20 +1,20 @@
 cc_library(
-    name = "data_source",
-    hdrs = ["data_source.h"],
+    name = "database_transaction_adapter",
+    hdrs = ["database_transaction_adapter.h"],
     deps = [
         "@com_google_absl//absl/status",
     ],
 )
 
 cc_library(
-    name = "lmdb_data_source",
+    name = "lmdb_database_transaction_adapter",
     srcs = [
-        "lmdb_data_source.cc",
-        "lmdb_data_source.h",
+        "lmdb_database_transaction_adapter.cc",
+        "lmdb_database_transaction_adapter.h",
     ],
-    hdrs = ["lmdb_data_source.h"],
+    hdrs = ["lmdb_database_transaction_adapter.h"],
     deps = [
-        ":data_source",
+        ":database_transaction_adapter",
         "@com_drycpp_lmdbxx//:lmdb++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/strings",
@@ -22,13 +22,12 @@ cc_library(
 )
 
 cc_test(
-    name = "lmdb_data_source_test",
+    name = "lmdb_database_transaction_adapter_test",
     srcs = [
-        "lmdb_data_source_test.cc",
+        "lmdb_database_transaction_adapter_test.cc",
     ],
-    shard_count = 2,
     deps = [
-        ":lmdb_data_source",
+        ":lmdb_database_transaction_adapter",
         "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",

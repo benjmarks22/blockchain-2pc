@@ -1,4 +1,4 @@
-#include "src/db/lmdb_data_source.h"
+#include "src/db/lmdb_database_transaction_adapter.h"
 
 #include <sys/stat.h>
 
@@ -16,17 +16,19 @@ constexpr mdb_mode_t kFileOpenMode = (S_IRUSR | S_IWUSR);
 
 }  // namespace
 
-LMDBDataSource::LMDBDataSource(std::string_view db_path) : db_path_(db_path) {
+LMDBDatabaseTransactionAdapter::LMDBDatabaseTransactionAdapter(
+    std::string_view db_path)
+    : db_path_(db_path) {
   Connect();
 }
 
-void LMDBDataSource::Connect() {
+void LMDBDatabaseTransactionAdapter::Connect() {
   env_ = std::make_unique<lmdb::env>(lmdb::env::create());
   env_->set_mapsize(k1GbMapsize);
   env_->open(db_path_.c_str(), 0, kFileOpenMode);
 }
 
-absl::Status LMDBDataSource::Begin() {
+absl::Status LMDBDatabaseTransactionAdapter::Begin() {
   if (txn_ != nullptr) {
     return absl::FailedPreconditionError(
         "Cannot open another transaction while a transaction hasn't "
@@ -37,7 +39,7 @@ absl::Status LMDBDataSource::Begin() {
   return absl::OkStatus();
 }
 
-absl::Status LMDBDataSource::Commit() {
+absl::Status LMDBDatabaseTransactionAdapter::Commit() {
   if (txn_ == nullptr) {
     return absl::FailedPreconditionError(
         "No valid transaction to Commit. Please Begin() first.");
@@ -47,7 +49,7 @@ absl::Status LMDBDataSource::Commit() {
   return absl::OkStatus();
 }
 
-absl::Status LMDBDataSource::Abort() {
+absl::Status LMDBDatabaseTransactionAdapter::Abort() {
   if (txn_ == nullptr) {
     return absl::FailedPreconditionError(
         "No valid transaction to Abort. Please Begin() first.");
@@ -57,8 +59,8 @@ absl::Status LMDBDataSource::Abort() {
   return absl::OkStatus();
 }
 
-absl::Status LMDBDataSource::Get(const std::string& key,
-                                 int64_t& output_value) {
+absl::Status LMDBDatabaseTransactionAdapter::Get(const std::string &key,
+                                                 int64_t &output_value) {
   if (txn_ == nullptr) {
     return absl::FailedPreconditionError(
         "No valid transaction available. Please Begin() first.");
@@ -69,7 +71,8 @@ absl::Status LMDBDataSource::Get(const std::string& key,
   return absl::OkStatus();
 }
 
-absl::Status LMDBDataSource::Put(const std::string& key, int64_t value) {
+absl::Status LMDBDatabaseTransactionAdapter::Put(const std::string &key,
+                                                 int64_t value) {
   if (txn_ == nullptr) {
     return absl::FailedPreconditionError(
         "No valid transaction available. Please Begin() first.");
@@ -80,7 +83,7 @@ absl::Status LMDBDataSource::Put(const std::string& key, int64_t value) {
   return absl::OkStatus();
 }
 
-void LMDBDataSource::ReleaseTransaction() {
+void LMDBDatabaseTransactionAdapter::ReleaseTransaction() {
   txn_.reset(nullptr);
   dbi_.reset(nullptr);
 }

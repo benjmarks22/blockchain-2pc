@@ -1,22 +1,22 @@
-#ifndef SRC_DB_LMDB_DATA_SOURCE_H_
+#ifndef SRC_DB_LMDB_DATABASE_TRANSACTION_ADAPTER_H_
 
-#define SRC_DB_LMDB_DATA_SOURCE_H_
+#define SRC_DB_LMDB_DATABASE_TRANSACTION_ADAPTER_H_
 
 #include <memory>
 #include <string>
 
 #include "lmdbxx/lmdb++.h"
-#include "src/db/data_source.h"
+#include "src/db/database_transaction_adapter.h"
 
 namespace db {
 
 // Database Interface that supports transaction operations based on
 // LMDB primitives.
-class LMDBDataSource : public DataSource {
+class LMDBDatabaseTransactionAdapter : public DatabaseTransactionAdapter {
  public:
-  explicit LMDBDataSource(std::string_view db_path);
+  explicit LMDBDatabaseTransactionAdapter(std::string_view db_path);
 
-  ~LMDBDataSource() = default;
+  ~LMDBDatabaseTransactionAdapter() = default;
 
   // Begins a transaction.
   absl::Status Begin() final;
@@ -54,4 +54,4 @@ class LMDBDataSource : public DataSource {
 
 }  // namespace db
 
-#endif  // SRC_DB_LMDB_DATA_SOURCE_H_
+#endif  // SRC_DB_LMDB_DATABASE_TRANSACTION_ADAPTER_H_

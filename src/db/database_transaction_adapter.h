@@ -1,6 +1,6 @@
-#ifndef SRC_DB_DATA_SOURCE_H_
+#ifndef SRC_DB_DATABASE_TRANSACTION_ADAPTER_H_
 
-#define SRC_DB_DATA_SOURCE_H_
+#define SRC_DB_DATABASE_TRANSACTION_ADAPTER_H_
 
 #include <string>
 
@@ -9,10 +9,10 @@
 namespace db {
 
 // Abstract Database Interface that supports transaction operations.
-class DataSource {
+class DatabaseTransactionAdapter {
  public:
-  DataSource() = default;
-  ~DataSource() = default;
+  DatabaseTransactionAdapter() = default;
+  ~DatabaseTransactionAdapter() = default;
 
   // Begins a transaction.
   virtual absl::Status Begin() = 0;
@@ -40,4 +40,4 @@ class DataSource {
 
 }  // namespace db
 
-#endif  // SRC_DB_DATA_SOURCE_H_
+#endif  // SRC_DB_DATABASE_TRANSACTION_ADAPTER_H_
