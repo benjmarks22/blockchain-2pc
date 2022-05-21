@@ -17,6 +17,9 @@ class DatabaseTransactionAdapter {
   // Begins a transaction.
   virtual absl::Status Begin() = 0;
 
+  // Begins a read-only transaction.
+  virtual absl::Status BeginReadOnly() = 0;
+
   // Commits a transaction.
   virtual absl::Status Commit() = 0;
 

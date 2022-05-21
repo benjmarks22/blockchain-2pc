@@ -12,14 +12,20 @@ namespace db {
 
 // Database Interface that supports transaction operations based on
 // LMDB primitives.
+// NOTICE:
+//   LMDB only support 1 open read-write txn and 0+ read-only txns.
+//   Two 2+ read-write txn will block the process from proceeding.
 class LMDBDatabaseTransactionAdapter : public DatabaseTransactionAdapter {
  public:
   explicit LMDBDatabaseTransactionAdapter(std::string_view db_path);
 
   ~LMDBDatabaseTransactionAdapter() = default;
 
-  // Begins a transaction.
+  // Begins a read-write transaction.
   absl::Status Begin() final;
+
+  // Begins a read-only transaction.
+  absl::Status BeginReadOnly() final;
 
   // Commits a transaction.
   absl::Status Commit() final;
@@ -47,6 +53,7 @@ class LMDBDatabaseTransactionAdapter : public DatabaseTransactionAdapter {
   void ReleaseTransaction();
 
   const std::string db_path_;
+  bool is_readonly_ = false;
   std::unique_ptr<lmdb::env> env_ = nullptr;
   std::unique_ptr<lmdb::txn> txn_ = nullptr;
   std::unique_ptr<lmdb::dbi> dbi_ = nullptr;

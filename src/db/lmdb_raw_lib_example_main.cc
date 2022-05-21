@@ -72,18 +72,6 @@ int main() {
               email_val_get_only.c_str());
   wtxn_get_only.commit();
 
-  //
-  lmdb::txn wtxn1 = lmdb::txn::begin(env);
-  lmdb::dbi dbi1 = lmdb::dbi::open(wtxn1, nullptr);
-  put(dbi1, wtxn1, "key1", "foo");
-  lmdb::txn wtxn2 = lmdb::txn::begin(env);
-  lmdb::dbi dbi2 = lmdb::dbi::open(wtxn2, nullptr);
-  put(dbi2, wtxn2, "key2", "bar");
-  std::printf("wtxn1.commit\n");
-  wtxn1.commit();
-  std::printf("wtxn2.commit\n");
-  wtxn2.commit();
-
   // Fetch key/value pairs in a read-only transaction
   std::printf("Readonly txn w/ cursor: \n");
   lmdb::txn rtxn = lmdb::txn::begin(env, nullptr, MDB_RDONLY);

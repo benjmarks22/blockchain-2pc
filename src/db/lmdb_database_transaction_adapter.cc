@@ -34,7 +34,21 @@ absl::Status LMDBDatabaseTransactionAdapter::Begin() {
         "Cannot open another transaction while a transaction hasn't "
         "commited or aborted yet.");
   }
+  is_readonly_ = false;
   txn_ = std::make_unique<lmdb::txn>(lmdb::txn::begin(*env_));
+  dbi_ = std::make_unique<lmdb::dbi>(lmdb::dbi::open(*txn_, nullptr));
+  return absl::OkStatus();
+}
+
+absl::Status LMDBDatabaseTransactionAdapter::BeginReadOnly() {
+  if (txn_ != nullptr) {
+    return absl::FailedPreconditionError(
+        "Cannot open another transaction while a transaction hasn't "
+        "commited or aborted yet.");
+  }
+  is_readonly_ = true;
+  txn_ =
+      std::make_unique<lmdb::txn>(lmdb::txn::begin(*env_, nullptr, MDB_RDONLY));
   dbi_ = std::make_unique<lmdb::dbi>(lmdb::dbi::open(*txn_, nullptr));
   return absl::OkStatus();
 }
@@ -76,6 +90,12 @@ absl::Status LMDBDatabaseTransactionAdapter::Put(const std::string &key,
   if (txn_ == nullptr) {
     return absl::FailedPreconditionError(
         "No valid transaction available. Please Begin() first.");
+  }
+  if (is_readonly_) {
+    return absl::FailedPreconditionError(
+        "Cannot call Put with read only transaction. "
+        "Please Abort() or Commit() the current transaction "
+        "and call Begin() instead.");
   }
   if (!dbi_->put(*txn_, key, value)) {
     return absl::InternalError("Put failed.");

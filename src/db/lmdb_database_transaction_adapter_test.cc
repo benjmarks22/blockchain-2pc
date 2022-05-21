@@ -84,41 +84,34 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   LOG(INFO) << "LOG: Initialzation commited with txn1. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
+  // There can be 1 read-write txn and 0+ read-only txns.
+  // But there 2+ read-write txn will block the process from proceeding.
   LMDBDatabaseTransactionAdapter db_txn_adapter2("/tmp");
   LMDBDatabaseTransactionAdapter db_txn_adapter3("/tmp");
   ASSERT_EQ(db_txn_adapter2.Begin().code(), absl::StatusCode::kOk);
   LOG(INFO) << "LOG: Concurrent txn 2 Begin. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
-  ASSERT_EQ(db_txn_adapter3.Begin().code(), absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: Concurrent txn 3 Begin. Duration: "
+  ASSERT_EQ(db_txn_adapter3.BeginReadOnly().code(), absl::StatusCode::kOk);
+  LOG(INFO) << "LOG: Concurrent (readonly) txn 3 Begin. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
+  // db_txn_adapter2 Gets key2 then Puts key2 by adding 3 on the value.
+  // db_txn_adapter3 Gets key2 before db_txn_adapter2 commits.
   int64_t txn2_got_value;
   int64_t txn3_got_value;
-
-  // db_txn_adapter2 Gets key2 then Puts key1
-  // db_txn_adapter3 Puts key2 then Gets key1
-  // Both adapters do not commit.
   LOG(INFO) << "LOG: txn 2 gets key2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
   EXPECT_EQ(db_txn_adapter2.Get(key2, txn2_got_value).code(),
             absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: txn 3 puts key2. Duration: "
+  LOG(INFO) << "LOG: txn 2 puts key2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
-  EXPECT_EQ(db_txn_adapter3.Put(key2, 7).code(), absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: txn 2 puts key1. Duration: "
-            << float(clock() - begin_time) / CLOCKS_PER_SEC;
-  EXPECT_EQ(db_txn_adapter2.Put(key1, 5).code(), absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: txn 3 gets key1. Duration: "
-            << float(clock() - begin_time) / CLOCKS_PER_SEC;
-  EXPECT_EQ(db_txn_adapter3.Get(key1, txn3_got_value).code(),
+  EXPECT_EQ(db_txn_adapter2.Put(key2, txn2_got_value + 3).code(),
             absl::StatusCode::kOk);
-  LOG(INFO) << "LOG: txn 3 puts key1. Duration: "
+  LOG(INFO) << "LOG: txn 3 gets key2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
-  EXPECT_EQ(db_txn_adapter3.Put(key1, txn3_got_value + 10).code(),
+  EXPECT_EQ(db_txn_adapter3.Get(key2, txn3_got_value).code(),
             absl::StatusCode::kOk);
 
-  // LMDB treat both txns to operate on a view when the txn starts.
   // Both Commmits are OK.
   LOG(INFO) << "LOG: Commiting txn 2. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
@@ -129,8 +122,9 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   LOG(INFO) << "LOG: txn 2 & 3 commited. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 
+  // Expect read-only txn3 doesn't see uncommited value.
   EXPECT_EQ(txn2_got_value, 2);
-  EXPECT_EQ(txn3_got_value, 1);
+  EXPECT_EQ(txn3_got_value, 2);
 
   // Read the current value of key1 and key2
   LOG(INFO) << "LOG: Starting txn 4 to read commited values. Duration: "
@@ -142,9 +136,9 @@ TEST(LMDBDatabaseTransactionAdapter, ParallelTxnsPutAndGet) {
   ASSERT_EQ(db_txn_adapter1.Get(key2, key2_val).code(), absl::StatusCode::kOk);
   ASSERT_EQ(db_txn_adapter1.Commit().code(), absl::StatusCode::kOk);
   // Final value depends on the order of commit.
-  // Later commited txn will overwrite the related keys.
-  EXPECT_EQ(key1_val, 11);
-  EXPECT_EQ(key2_val, 7);
+  // Expect value of key1 remains unchanged and value key2 updated.
+  EXPECT_EQ(key1_val, 1);
+  EXPECT_EQ(key2_val, 5);
   LOG(INFO) << "LOG: txn 4 commited. Duration: "
             << float(clock() - begin_time) / CLOCKS_PER_SEC;
 }
