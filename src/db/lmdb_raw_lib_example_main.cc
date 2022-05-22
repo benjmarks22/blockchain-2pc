@@ -82,7 +82,6 @@ int main() {
   }
   cursor.close();
   rtxn.abort();
-
   // The enviroment is closed automatically.
   return 0;
 }
