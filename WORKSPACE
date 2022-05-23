@@ -63,6 +63,24 @@ yarn_install(
 )
 
 new_git_repository(
+    name = "openssl",
+    build_file_content = """
+cc_library(
+    name = "openssl",
+    srcs = glob([
+        "include/openssl/*.h",
+    ]),
+    hdrs = glob([
+        "include/openssl/*.h",
+    ]),
+    visibility = ["//visibility:public",],
+)
+""",
+    commit = "4d346a188c27bdf78aa76590c641e1217732ca4b",
+    remote = "https://github.com/openssl/openssl",
+)
+
+new_git_repository(
     name = "thread_pool",
     build_file_content = """
 cc_library(

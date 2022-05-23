@@ -18,6 +18,7 @@ grpc_proto_library(
 grpc_proto_library(
     name = "cohort",
     srcs = ["cohort.proto"],
+    generate_mocks = True,
     deps = [
         ":common",
     ],
