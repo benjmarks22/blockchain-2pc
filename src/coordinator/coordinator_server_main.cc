@@ -39,9 +39,11 @@ int main(int argc, char** argv) {
                       &duration, &error)) {
     RunServer(absl::GetFlag(FLAGS_port), duration);
   } else {
-    std::printf(
+    std::fprintf(
+        stderr,
         "Error parsing default duration for the presumed abort time: %s.\n",
         error.c_str());
+    return 1;
   }
 
   return 0;

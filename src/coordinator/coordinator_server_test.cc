@@ -27,12 +27,16 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
 
   MOCK_METHOD4(MockPrepareCohortTransaction,
                void(const std::string& transaction_id,
-                    const common::Namespace& ns,
+                    const common::Namespace& namespace_,
                     const cohort::PrepareTransactionRequest& request,
                     const grpc::ServerContext& context));
-
   MOCK_METHOD1(MockFinishAsyncGetResultsFromCohort,
                grpc::Status(cohort::GetTransactionResultResponse& response));
+  MOCK_METHOD4(MockGetResultsFromCohort,
+               grpc::Status(const common::Namespace& namespace_,
+                            const cohort::GetTransactionResultRequest& request,
+                            grpc::ClientContext& context,
+                            cohort::GetTransactionResultResponse& response));
   MOCK_METHOD3(
       MockStartVoting,
       absl::Status(const std::string& transaction_id,
@@ -43,18 +47,19 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
                    const std::string& transaction_id));
   MOCK_METHOD0(MockNow, absl::Time());
 
- protected:
+ private:
+  bool SortCohortRequests() override { return true; }
   absl::Time Now() override { return MockNow(); }
   void PrepareCohortTransaction(
-      const std::string& transaction_id, const common::Namespace& ns,
+      const std::string& transaction_id, const common::Namespace& namespace_,
       const cohort::PrepareTransactionRequest& request,
       const grpc::ServerContext& context) override {
-    MockPrepareCohortTransaction(transaction_id, ns, request, context);
+    MockPrepareCohortTransaction(transaction_id, namespace_, request, context);
   }
   std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
       cohort::GetTransactionResultResponse>>
   AsyncGetResultsFromCohort(
-      const common::Namespace& /*ns*/,
+      const common::Namespace& /*namespace_*/,
       const cohort::GetTransactionResultRequest& /*request*/,
       grpc::ClientContext& /*context*/) override {
     return nullptr;
@@ -64,6 +69,13 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
           cohort::GetTransactionResultResponse>>& /*async_response*/,
       cohort::GetTransactionResultResponse& response) override {
     return MockFinishAsyncGetResultsFromCohort(response);
+  }
+  grpc::Status GetResultsFromCohort(
+      const common::Namespace& namespace_,
+      const cohort::GetTransactionResultRequest& request,
+      grpc::ClientContext& context,
+      cohort::GetTransactionResultResponse& response) override {
+    return MockGetResultsFromCohort(namespace_, request, context, response);
   }
   absl::Status StartVoting(
       const std::string& transaction_id,
@@ -353,13 +365,17 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommitted) {
   EXPECT_CALL(server, MockGetVotingDecision(_))
       .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
+  mock_cohort_response.mutable_committed_response();
+  cohort::GetTransactionResultResponse mock_cohort_response2;
   auto* cohort_get_response =
-      mock_cohort_response.mutable_committed_response()->add_get_responses();
+      mock_cohort_response2.mutable_committed_response()->add_get_responses();
   cohort_get_response->mutable_get()->set_key("b");
   cohort_get_response->mutable_namespace_()->set_address("namespace2");
   cohort_get_response->mutable_value()->set_int64_value(3);
   EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
       .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+                      Return(grpc::Status::OK)))
+      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response2),
                       Return(grpc::Status::OK)));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response,
@@ -398,8 +414,8 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommittedSingleNamespace) {
   cohort_get_response->mutable_get()->set_key("a");
   cohort_get_response->mutable_namespace_()->set_address("fake_address");
   cohort_get_response->mutable_value()->set_int64_value(3);
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response,
@@ -434,8 +450,8 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommittedWriteOnly) {
   coordinator::GetTransactionResultResponse get_response;
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.mutable_committed_response();
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response,
@@ -509,8 +525,8 @@ TEST(CoordinatorServerTest, GetsResultsWhenAbortedSingleNamespace) {
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.set_aborted_response(
       common::ABORT_REASON_RESOURCE_LOCKED);
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response,
@@ -542,10 +558,12 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommittedPartialResponse) {
   EXPECT_CALL(server, MockGetVotingDecision(_))
       .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
+  mock_cohort_response.mutable_committed_response();
   EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(
-          SetArgReferee<0>(mock_cohort_response),
-          Return(grpc::Status(grpc::DEADLINE_EXCEEDED, "Deadline exceeded"))));
+      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+                      Return(grpc::Status::OK)))
+      .WillOnce(
+          Return(grpc::Status(grpc::DEADLINE_EXCEEDED, "Deadline exceeded")));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response, EquivToProto(R"pb(committed_response {})pb"));
 }
