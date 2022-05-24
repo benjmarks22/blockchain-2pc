@@ -9,6 +9,7 @@ import "google/protobuf/timestamp.proto";
 // Identifies which cohort is responsible for executing the operation.
 message Namespace {
   string identifier = 1;
+  string address = 2;
 }
 
 // Using a message to allow for extending to support multiple keys (e.g.

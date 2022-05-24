@@ -22,7 +22,7 @@ message CommitAtomicTransactionResponse {
   // Identifier for transaction within cohorts/coordinators. Globally unique
   // across all requests for all clients. Client can use this to request status
   // updates and to check the blockchain themselves.
-  string transaction_id = 1;
+  string global_transaction_id = 1;
   // Includes abort time.
   common.TransactionConfig config = 2;
 }
@@ -36,23 +36,30 @@ message GetTransactionResultRequest {
   // Identifier for transaction within cohorts/coordinators. Globally unique
   // across all requests for all clients. Client can use this to request status
   // updates and to check the blockchain themselves.
-  string transaction_id = 1;
+  string global_transaction_id = 1;
+}
+
+message CommittedResponse {
+  // Indicates all data is present.
+  bool complete = 1;
+  // Contains partial results unless complete is set to true.
+  common.CommittedResponse response = 2;
 }
 
 message GetTransactionResultResponse {
   oneof status {
     common.PendingResponse pending_response = 1;
-    common.CommittedResponse committed_response = 2;
+    CommittedResponse committed_response = 2;
     AbortedResponse aborted_response = 3;
   }
 }
 
 service Coordinator {
-  // Atomically commit a transaction on behalf of a client.
+  // Atomically commits a transaction on behalf of a client.
   rpc CommitAtomicTransaction(CommitAtomicTransactionRequest)
       returns (CommitAtomicTransactionResponse) {}
 
-  // Get the current result of a previously submitted transaction.
+  // Gets the current result of a previously submitted transaction.
   // Possible results are pending, aborted (with reason for aborting and which
   // servers failed), and committed (with results for all get ops).
   rpc GetTransactionResult(GetTransactionResultRequest)

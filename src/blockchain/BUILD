@@ -115,6 +115,7 @@ cc_library(
         "two_phase_commit.h",
     ],
     hdrs = ["two_phase_commit.h"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",

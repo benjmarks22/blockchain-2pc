@@ -12,6 +12,7 @@ Checks: >
   -modernize-use-trailing-return-type,
   -google-runtime-references,
   -readability-magic-numbers,
+  -misc-non-private-member-variables-in-classes,
 
 # Turn all the warnings from the checks above into errors.
 WarningsAsErrors: "*"

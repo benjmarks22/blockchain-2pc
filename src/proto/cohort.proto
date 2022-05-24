@@ -16,6 +16,15 @@ message PrepareTransactionRequest {
   common.Transaction transaction = 2;
   // Should be the final config updated by the coordinator.
   common.TransactionConfig config = 3;
+
+  oneof participant_info {
+    // Indicates that this cohort is the only participant in the transaction.
+    bool only_cohort = 4;
+    // Identifier for the cohort to use in the blockchain. Each cohort will
+    // have a unique cohort_index within a transaction, but it will be
+    // different for other transactions.
+    uint32 cohort_index = 5;
+  }
 }
 
 // This is just an acknowledgement that the transaction has been received and

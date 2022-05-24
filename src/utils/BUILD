@@ -9,6 +9,7 @@ cc_library(
     hdrs = ["grpc_utils.h"],
     deps = [
         "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/status",
+        "@com_google_absl//absl/strings",
     ],
 )

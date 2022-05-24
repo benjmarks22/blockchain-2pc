@@ -76,7 +76,8 @@ int main() {
   std::printf("Readonly txn w/ cursor: \n");
   lmdb::txn rtxn = lmdb::txn::begin(env, nullptr, MDB_RDONLY);
   lmdb::cursor cursor = lmdb::cursor::open(rtxn, dbi);
-  std::string key, value;
+  std::string key;
+  std::string value;
   while (cursor.get(key, value, MDB_NEXT)) {
     std::printf("key: '%s', value: '%s'\n", key.c_str(), value.c_str());
   }
