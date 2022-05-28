@@ -18,6 +18,7 @@ namespace internal {
 struct TransactionMetadata {
   GetTransactionResultResponse response;
   std::unique_ptr<db::DatabaseTransactionAdapter> db;
+  bool has_whole_db_lock;
   std::vector<std::string> read_lock_keys;
   std::vector<std::string> write_lock_keys;
 };
@@ -78,6 +79,8 @@ class CohortServer : public Cohort::Service {
 
   absl::Mutex locks_by_key_mutex_;
   absl::flat_hash_map<std::string, std::unique_ptr<absl::Mutex>> locks_by_key_;
+  // Used for DBs that don't support concurrent write transactions.
+  absl::Mutex whole_db_mutex_;
 };
 
 }  // namespace cohort
