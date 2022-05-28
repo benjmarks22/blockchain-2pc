@@ -20,12 +20,14 @@ class InMemoryDb : public db::DatabaseTransactionAdapter {
     if (in_txn_) {
       return absl::FailedPreconditionError("Already in transaction");
     }
+    in_txn_ = true;
     return absl::OkStatus();
   }
   absl::Status BeginReadOnly() override {
     if (in_txn_) {
       return absl::FailedPreconditionError("Already in transaction");
     }
+    in_txn_ = true;
     return absl::OkStatus();
   }
   // Commits a transaction.
@@ -35,6 +37,7 @@ class InMemoryDb : public db::DatabaseTransactionAdapter {
     }
     data_.insert(txn_data_.begin(), txn_data_.end());
     txn_data_.clear();
+    in_txn_ = false;
     return absl::OkStatus();
   }
 
@@ -44,6 +47,7 @@ class InMemoryDb : public db::DatabaseTransactionAdapter {
       return absl::FailedPreconditionError("Not in transaction");
     }
     txn_data_.clear();
+    in_txn_ = false;
     return absl::OkStatus();
   }
 
@@ -92,7 +96,9 @@ GetDbCreatorFunc(absl::flat_hash_map<std::string, int64_t>& data) {
   return [&data]() { return std::make_unique<InMemoryDb>(data); };
 }
 
-TEST(CohortServerTest, PrepareTransactionRequestSetsPendingTransaction) {
+// TODO(benjmarks22): Add more tests.
+
+TEST(CohortServerTest, GetRequestForNotFoundAborts) {
   grpc::ServerContext context;
   cohort::PrepareTransactionRequest prepare_request;
   cohort::PrepareTransactionResponse prepare_response;
@@ -111,9 +117,14 @@ TEST(CohortServerTest, PrepareTransactionRequestSetsPendingTransaction) {
   cohort::GetTransactionResultRequest get_request;
   get_request.set_transaction_id("id");
   cohort::GetTransactionResultResponse get_response;
+  // Necessary so it can process the transaction.
+  std::this_thread::sleep_for(std::chrono::seconds(1));
   EXPECT_TRUE(
       server.GetTransactionResult(&context, &get_request, &get_response).ok());
-  EXPECT_THAT(get_response, EqualsProto(R"pb(pending_response {})pb"));
+  EXPECT_THAT(
+      get_response,
+      EqualsProto(R"pb(aborted_response:
+                           ABORT_REASON_OPERATION_FOR_NON_EXISTENT_VALUE)pb"));
 }
 
 }  // namespace
