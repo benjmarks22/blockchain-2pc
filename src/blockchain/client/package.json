@@ -1,0 +1,12 @@
+{
+  "name": "blockchain-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "demo.js",
+  "scripts": {},
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "web3": "^1.7.3"
+  }
+}

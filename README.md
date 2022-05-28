@@ -54,11 +54,11 @@ To format all Bazel files, run:
 
 To format, run:
 
-`clang-format -style=google <file>`
+`clang-format --style=google <file>`
 
 To format all changed C++ and proto files, run:
 
-`git diff -U0 --no-color HEAD^ | clang-format-diff -i -style=google -p1`
+`git diff -U0 --no-color HEAD^ | clang-format-diff -i --style=google -p1`
 
 To run static analysis, run:
 
@@ -72,8 +72,14 @@ To fix static analysis errors for all changed lines, change the third command to
 
 `git diff -U0 HEAD^ | clang-tidy-diff -fix -p1 -path compile_commands.json`
 
-### Solidity
+### Solidity files
 
 To format all solidity files:
 
 `prettier --plugin-search-dir=src/blockchain --write 'src/blockchain/**/**/*.sol'`
+
+### JavaScript files
+
+To format javascript files:
+
+`clang-format -i --style=Google src/blockchain/*.js src/blockchain/client/*.js`

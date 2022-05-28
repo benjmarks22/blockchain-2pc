@@ -25,8 +25,8 @@ repos:
     -   id: clang-format
         name: clang format
         description: Runs `clang-format`, requires clang-format package
-        entry: clang-format -style=google --dry-run -Werror
-        files: '\.h$|\.cc$|\.proto$'
+        entry: clang-format --style=google --dry-run --Werror
+        files: '\.h$|\.cc$|\.proto$|\.js$'
         language: system
     -   id: clang-tidy
         name: clang-tidy
