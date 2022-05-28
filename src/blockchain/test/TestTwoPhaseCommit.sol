@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: MIT
+// Unit-test for TwoPhaseCommit smart contract.
 pragma solidity >=0.4.22 <0.9.0;
 
 import "truffle/Assert.sol";
