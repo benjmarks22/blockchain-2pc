@@ -80,7 +80,8 @@ message TransactionConfig {
   // The transaction will be presumed aborted if there is a blockchain block
   // with a timestamp greater than or equal to this timestamp and the
   // transaction has not yet been committed.
-  // TODO(benjmarks22): Describe the default when it is decided.
+  // The default is to use 1 minute after the time the coordinator starts
+  // processing the request.
   google.protobuf.Timestamp presumed_abort_time = 1;
 }
 

@@ -15,7 +15,7 @@
 #include "src/proto/cohort.grpc.pb.h"
 #include "src/proto/common.pb.h"
 #include "src/proto/coordinator.grpc.pb.h"
-#include "src/utils/grpc_utils.h"
+#include "src/utils/status_utils.h"
 
 namespace coordinator {
 

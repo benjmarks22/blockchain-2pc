@@ -1,6 +1,7 @@
 cc_library(
     name = "database_transaction_adapter",
     hdrs = ["database_transaction_adapter.h"],
+    visibility = ["//visibility:public"],
     deps = [
         "@com_google_absl//absl/status",
     ],
@@ -13,6 +14,7 @@ cc_library(
         "lmdb_database_transaction_adapter.h",
     ],
     hdrs = ["lmdb_database_transaction_adapter.h"],
+    visibility = ["//visibility:public"],
     deps = [
         ":database_transaction_adapter",
         "@com_drycpp_lmdbxx//:lmdb++",

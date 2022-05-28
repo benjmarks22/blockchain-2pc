@@ -1,12 +1,12 @@
 package(default_visibility = ["//visibility:public"])
 
 cc_library(
-    name = "grpc_utils",
+    name = "status_utils",
     srcs = [
-        "grpc_utils.cc",
-        "grpc_utils.h",
+        "status_utils.cc",
+        "status_utils.h",
     ],
-    hdrs = ["grpc_utils.h"],
+    hdrs = ["status_utils.h"],
     deps = [
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
