@@ -1,5 +1,5 @@
 filegroup(
     name = "contracts",
     srcs = glob(["*.sol"]),
-    visibility = ["//src/blockchain:__pkg__"],
+    visibility = ["//src/blockchain:__subpackages__"],
 )

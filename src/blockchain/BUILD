@@ -1,3 +1,5 @@
+package(default_visibility = ["//src/blockchain:__subpackages__"])
+
 sh_library(
     name = "setup_truffle",
     srcs = [
