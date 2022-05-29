@@ -1,3 +1,5 @@
+package(default_visibility = ["//src/blockchain:__subpackages__"])
+
 sh_library(
     name = "setup_truffle",
     srcs = [
@@ -56,10 +58,28 @@ sh_binary(
     ],
 )
 
-sh_binary(
+sh_library(
     name = "deploy_ganache",
     srcs = [
         "deploy_ganache.sh",
+    ],
+    data = [
+        ":truffle-config",
+        "//src/blockchain/contracts",
+        "//src/blockchain/migrations",
+        "@blockchain_npm//ganache/bin:ganache",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
+    deps = [
+        ":setup_truffle",
+        "@bazel_tools//tools/bash/runfiles",
+    ],
+)
+
+sh_binary(
+    name = "deploy_ganache_with_console",
+    srcs = [
+        "deploy_ganache_with_console.sh",
     ],
     args = [
         "$(location :truffle-config)",
@@ -74,7 +94,7 @@ sh_binary(
         "@blockchain_npm//truffle/bin:truffle",
     ],
     deps = [
-        ":setup_truffle",
+        ":deploy_ganache",
         "@bazel_tools//tools/bash/runfiles",
     ],
 )

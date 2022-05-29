@@ -39,7 +39,7 @@ $ bazel run //src/blockchain:deploy_truffle
 ### Deploy (on local Ganache, can interact with the contract)
 
 ```
-$ bazel run //src/blockchain:deploy_ganache
+$ bazel run //src/blockchain:deploy_ganache_with_console
 truffle(development)> let contract = await TwoPhaseCommit.deployed();
 undefined
 truffle(development)> contract.getHeartBeat();

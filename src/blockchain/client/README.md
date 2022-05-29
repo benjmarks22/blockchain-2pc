@@ -24,11 +24,6 @@ TODO(heronyang): Add this part.
 
 ## Run Demo (No RPC Server / Trying Library Code Only)
 
-Fill in `contract address` and `account address` (pick one account) in
-`main.js` then run:
-
 ```
-$ node main.js
+$ bazel run //src/blockchain/client:main_client
 ```
-
-TODO(heronyang): Add bazel support.
