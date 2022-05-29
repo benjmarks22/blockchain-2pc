@@ -3,12 +3,30 @@ syntax = "proto3";
 
 package blockchain;
 
-message GetHeartBeatRequest {}
+import "google/protobuf/timestamp.proto";
 
+message StartVotingRequest {
+  string transaction_id = 1;
+  google.protobuf.Timestamp timeout_time = 2;
+  uint32 cohorts = 3;
+}
+message StartVotingResponse {}
+
+message VoteRequest {}
+message VoteResponse {}
+
+message GetVotingDecisionRequest {}
+message GetVotingDecisionResponse {}
+
+message GetHeartBeatRequest {}
 message GetHeartBeatResponse {
   bool is_ok = 1;
 }
 
 service TwoPhaseCommitAdapter {
+  rpc StartVoting(StartVotingRequest) returns (StartVotingResponse) {}
+  rpc Vote(VoteRequest) returns (VoteResponse) {}
+  rpc GetVotingDecision(GetVotingDecisionRequest)
+      returns (GetVotingDecisionResponse) {}
   rpc GetHeartBeat(GetHeartBeatRequest) returns (GetHeartBeatResponse) {}
 }
