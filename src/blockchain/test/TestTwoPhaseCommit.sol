@@ -18,13 +18,25 @@ contract TestTwoPhaseCommit {
         two_phase_commit.vote("t1", 1, TwoPhaseCommit.Ballot.COMMIT);
         two_phase_commit.vote("t1", 2, TwoPhaseCommit.Ballot.COMMIT);
 
-        TwoPhaseCommit.VotingDecision memory decision = two_phase_commit
-            .getVotingDecision("t1");
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.COMMIT),
-            int256(decision.option),
+            two_phase_commit.getVotingDecision("t1"),
+            "2:Sufficient vote collected before timeout.",
             "Expect getting a commit decision of a transaction after all "
             "cohorts have voted commit."
+        );
+    }
+
+    function testPendingTransaction() public {
+        TwoPhaseCommit two_phase_commit = new TwoPhaseCommit();
+        two_phase_commit.setMockNow(current_time);
+        two_phase_commit.startVoting("t1", 3, future_time);
+        two_phase_commit.vote("t1", 0, TwoPhaseCommit.Ballot.COMMIT);
+        two_phase_commit.vote("t1", 1, TwoPhaseCommit.Ballot.COMMIT);
+
+        Assert.equal(
+            two_phase_commit.getVotingDecision("t1"),
+            "1:Insufficient vote before timeout.",
+            "Expect getting a pending decision ('insufficient vote before timeout')"
         );
     }
 
@@ -36,18 +48,10 @@ contract TestTwoPhaseCommit {
         two_phase_commit.vote("t1", 1, TwoPhaseCommit.Ballot.COMMIT);
         two_phase_commit.vote("t1", 2, TwoPhaseCommit.Ballot.ABORT);
 
-        TwoPhaseCommit.VotingDecision memory decision = two_phase_commit
-            .getVotingDecision("t1");
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.ABORT),
-            int256(decision.option),
-            "Expect getting an abort decision of a transaction after one "
-            "cohort voted abort."
-        );
-        Assert.equal(
-            "Cohort voted to abort.",
-            decision.reason,
-            "Expect getting 'cohort voted to abort' as reason."
+            two_phase_commit.getVotingDecision("t1"),
+            "3:Cohort voted to abort.",
+            "Expect getting an abort decision ('cohort voted to abort')."
         );
     }
 
@@ -60,40 +64,10 @@ contract TestTwoPhaseCommit {
 
         two_phase_commit.setMockNow(future_time);
 
-        TwoPhaseCommit.VotingDecision memory decision = two_phase_commit
-            .getVotingDecision("t1");
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.ABORT),
-            int256(decision.option),
-            "Expect getting an abort decision of a transaction with "
-            "insufficient vote after timeout."
-        );
-        Assert.equal(
-            "Insufficient vote after timeout.",
-            decision.reason,
-            "Expect getting 'insufficient vote after timeout' as reason."
-        );
-    }
-
-    function testPendingTransaction() public {
-        TwoPhaseCommit two_phase_commit = new TwoPhaseCommit();
-        two_phase_commit.setMockNow(current_time);
-        two_phase_commit.startVoting("t1", 3, future_time);
-        two_phase_commit.vote("t1", 0, TwoPhaseCommit.Ballot.COMMIT);
-        two_phase_commit.vote("t1", 1, TwoPhaseCommit.Ballot.COMMIT);
-
-        TwoPhaseCommit.VotingDecision memory decision = two_phase_commit
-            .getVotingDecision("t1");
-        Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.PENDING),
-            int256(decision.option),
-            "Expect getting a pending decision of a transaction with "
-            "insufficient vote before timeout."
-        );
-        Assert.equal(
-            "Insufficient vote before timeout.",
-            decision.reason,
-            "Expect getting 'insufficient vote before timeout' as reason."
+            two_phase_commit.getVotingDecision("t1"),
+            "3:Insufficient vote after timeout.",
+            "Expect getting an abort decision ('insufficient vote after timeout')."
         );
     }
 
@@ -108,36 +82,36 @@ contract TestTwoPhaseCommit {
 
         two_phase_commit.vote("t1", 1, TwoPhaseCommit.Ballot.COMMIT);
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.PENDING),
-            int256(two_phase_commit.getVotingDecision("t1").option),
+            two_phase_commit.getVotingDecision("t1"),
+            "1:Insufficient vote before timeout.",
             "Expect getting a pending decision of a transaction (t1)."
         );
 
         two_phase_commit.vote("t2", 0, TwoPhaseCommit.Ballot.COMMIT);
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.PENDING),
-            int256(two_phase_commit.getVotingDecision("t2").option),
+            two_phase_commit.getVotingDecision("t2"),
+            "1:Insufficient vote before timeout.",
             "Expect getting a pending decision of a transaction (t2)."
         );
 
         two_phase_commit.vote("t3", 0, TwoPhaseCommit.Ballot.ABORT);
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.ABORT),
-            int256(two_phase_commit.getVotingDecision("t3").option),
+            two_phase_commit.getVotingDecision("t3"),
+            "3:Cohort voted to abort.",
             "Expect getting a abort decision of a transaction (t3)."
         );
 
         two_phase_commit.vote("t1", 0, TwoPhaseCommit.Ballot.COMMIT);
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.COMMIT),
-            int256(two_phase_commit.getVotingDecision("t1").option),
+            two_phase_commit.getVotingDecision("t1"),
+            "2:Sufficient vote collected before timeout.",
             "Expect getting a commit decision of a transaction (t1)."
         );
 
         two_phase_commit.setMockNow(future_time);
         Assert.equal(
-            int256(TwoPhaseCommit.VotingDecisionOption.ABORT),
-            int256(two_phase_commit.getVotingDecision("t2").option),
+            two_phase_commit.getVotingDecision("t2"),
+            "3:Insufficient vote after timeout.",
             "Expect getting a commit decision of a transaction (t2)."
         );
     }

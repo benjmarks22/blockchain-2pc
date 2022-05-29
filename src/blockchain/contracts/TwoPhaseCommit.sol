@@ -76,10 +76,11 @@ contract TwoPhaseCommit {
     }
 
     // Gets the voting decision of a transaction.
+    // As client can't parse `VotingDecision`, we serialize it into a string.
     function getVotingDecision(string memory transaction_id)
         public
         view
-        returns (VotingDecision memory)
+        returns (string memory)
     {
         require(transaction_configs[transaction_id].cohorts > 0);
 
@@ -97,35 +98,43 @@ contract TwoPhaseCommit {
                 Ballot.ABORT
             ) {
                 return
-                    VotingDecision({
-                        option: VotingDecisionOption.ABORT,
-                        reason: "Cohort voted to abort."
-                    });
+                    serializeVotingDecision(
+                        VotingDecision({
+                            option: VotingDecisionOption.ABORT,
+                            reason: "Cohort voted to abort."
+                        })
+                    );
             }
         }
 
         if (cohorts == votes) {
             return
-                VotingDecision({
-                    option: VotingDecisionOption.COMMIT,
-                    reason: "Sufficient vote collected before timeout."
-                });
+                serializeVotingDecision(
+                    VotingDecision({
+                        option: VotingDecisionOption.COMMIT,
+                        reason: "Sufficient vote collected before timeout."
+                    })
+                );
         }
 
         // As this point, we have insufficient votes to make a decision, so we
         // check if we've timed out.
         if (getNow() >= transaction_configs[transaction_id].vote_timeout_time) {
             return
-                VotingDecision({
-                    option: VotingDecisionOption.ABORT,
-                    reason: "Insufficient vote after timeout."
-                });
+                serializeVotingDecision(
+                    VotingDecision({
+                        option: VotingDecisionOption.ABORT,
+                        reason: "Insufficient vote after timeout."
+                    })
+                );
         }
         return
-            VotingDecision({
-                option: VotingDecisionOption.PENDING,
-                reason: "Insufficient vote before timeout."
-            });
+            serializeVotingDecision(
+                VotingDecision({
+                    option: VotingDecisionOption.PENDING,
+                    reason: "Insufficient vote before timeout."
+                })
+            );
     }
 
     // Called by test only - sets the mock time for now.
@@ -153,6 +162,24 @@ contract TwoPhaseCommit {
     {
         encoded /= ballot_base**cohort_id;
         return Ballot(encoded % ballot_base);
+    }
+
+    function serializeVotingDecision(VotingDecision memory voting_decision)
+        private
+        view
+        returns (string memory)
+    {
+        // Unfortunately, we can't concat a string with an enum or uint in
+        // Solidity now, so we implement with if/else statements.
+        string memory option_str = "?:";
+        if (voting_decision.option == VotingDecisionOption.PENDING) {
+            option_str = "1:";
+        } else if (voting_decision.option == VotingDecisionOption.COMMIT) {
+            option_str = "2:";
+        } else if (voting_decision.option == VotingDecisionOption.ABORT) {
+            option_str = "3:";
+        }
+        return string(abi.encodePacked(option_str, voting_decision.reason));
     }
 
     function getNow() private view returns (uint256) {
