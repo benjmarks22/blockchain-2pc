@@ -20,7 +20,18 @@ Check `contract address` and `account address` for later use.
 
 ## Run Blockchain Client Server
 
-TODO(heronyang): Add this part.
+TODO: Add bazel support.
+
+```
+$ node adapter_server.js
+```
+
+If you want to quickly test if the server is alive, run this command and expect
+'Is Ok: true' as output:
+
+```
+$ node adapter_client_demo.js
+```
 
 ## Run Demo (No RPC Server / Trying Library Code Only)
 
