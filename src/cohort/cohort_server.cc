@@ -5,6 +5,7 @@
 #include "absl/status/statusor.h"
 #include "absl/synchronization/mutex.h"
 #include "absl/time/time.h"
+#include "glog/logging.h"
 #include "grpcpp/server_context.h"
 #include "src/blockchain/two_phase_commit.h"
 #include "src/proto/cohort.grpc.pb.h"
@@ -24,12 +25,19 @@ Blockchain::VotingDecision WaitForBlockchainDecision(
       Blockchain::GetVotingDecision(transaction_id)
           .value_or(Blockchain::VotingDecision::PENDING);
   while (decision == Blockchain::VotingDecision::PENDING) {
+    VLOG(1) << "Waiting for blockchain decision";
     std::this_thread::sleep_for(
         absl::ToChronoMicroseconds(absl::Now() - presumed_abort_time));
     decision = Blockchain::GetVotingDecision(transaction_id)
                    .value_or(Blockchain::VotingDecision::PENDING);
   }
   return decision;
+}
+
+template <typename Message>
+bool WriteToFile(const Message& message, const std::string& path) {
+  std::fstream output(path, std::ios::out | std::ios::trunc | std::ios::binary);
+  return message.SerializeToOstream(&output);
 }
 
 }  // namespace
@@ -135,6 +143,7 @@ void CohortServer::AbortTransaction(const std::string& transaction_id,
                                     absl::optional<absl::Status> abort_status) {
   common::AbortReason abort_reason;
   if (abort_status.has_value()) {
+    LOG(INFO) << "Aborting due to " << abort_status.value();
     // It's okay if it fails since it will auto-abort at the presumed abort
     // time.
     Blockchain::Vote(transaction_id, cohort_index, Blockchain::Ballot::ABORT)
@@ -154,32 +163,43 @@ void CohortServer::AbortTransaction(const std::string& transaction_id,
       abort_reason);
   // TODO(benjmarks22): Maybe add retry logic here?
   metadata_by_transaction_id_[transaction_id].db->Abort().IgnoreError();
-  CleanUpTransactionMetadata(transaction_id);
+  ReleaseLocksAndDeleteMetadata(transaction_id);
 }
 
 void CohortServer::CommitTransaction(const std::string& transaction_id) {
   // The database must commit the transaction at this point, so the only
   // acceptable failures are transient ones (e.g. deadline exceeded). Thus we
   // retry until it succeeds.
-  while (!metadata_by_transaction_id_[transaction_id].db->Commit().ok()) {
+  while (true) {
+    absl::Status commit_status =
+        metadata_by_transaction_id_[transaction_id].db->Commit();
+    if (commit_status.ok()) {
+      break;
+    }
+    LOG(WARNING) << "Failed to commit transaction " << commit_status;
   }
   // This is necessary if it's a write only transaction to ensure the response
   // indicates that it committed.
   metadata_by_transaction_id_[transaction_id]
       .response.mutable_committed_response();
-  CleanUpTransactionMetadata(transaction_id);
+  ReleaseLocksAndDeleteMetadata(transaction_id);
 }
 
-absl::Status CohortServer::PersistTransactionResults(
-    const std::string& transaction_id) {
-  const std::string& path =
-      absl::StrCat(db_txn_response_dir_, "/", transaction_id, ".binarypb");
-  std::fstream output(path, std::ios::out | std::ios::trunc | std::ios::binary);
-  if (!metadata_by_transaction_id_[transaction_id]
-           .response.committed_response()
-           .SerializeToOstream(&output)) {
+absl::Status CohortServer::PersistTransaction(
+    const PrepareTransactionRequest& request) {
+  const std::string& response_path =
+      absl::StrCat(db_txn_response_dir_, "/response_", request.transaction_id(),
+                   ".binarypb");
+  if (!WriteToFile(metadata_by_transaction_id_[request.transaction_id()]
+                       .response.committed_response(),
+                   response_path)) {
     return absl::InternalError(
         "Failed to write transaction responses to disk.");
+  }
+  const std::string& request_path = absl::StrCat(
+      db_txn_response_dir_, "/request_", request.transaction_id(), ".binarypb");
+  if (!WriteToFile(request, request_path)) {
+    return absl::InternalError("Failed to write transaction request to disk.");
   }
   return absl::OkStatus();
 }
@@ -202,8 +222,7 @@ void CohortServer::ProcessTransaction(
     return;
   }
 
-  const absl::Status persist_status =
-      PersistTransactionResults(request.transaction_id());
+  const absl::Status persist_status = PersistTransaction(request);
   if (!persist_status.ok()) {
     AbortTransaction(request.transaction_id(), request.cohort_index(),
                      persist_status);
@@ -245,7 +264,7 @@ grpc::Status CohortServer::GetTransactionResult(
   return grpc::Status::OK;
 }
 
-void CohortServer::CleanUpTransactionMetadata(
+void CohortServer::ReleaseLocksAndDeleteMetadata(
     const std::string& transaction_id) {
   for (const auto& write_key :
        metadata_by_transaction_id_[transaction_id].write_lock_keys) {
