@@ -23,7 +23,7 @@ Check `contract address` and `account address` for later use.
 TODO: Add bazel support.
 
 ```
-$ node adapter_server.js
+$ node adapter_server.js <PORT> <CONTRACT_ADDRESS> <ACCOUNT>
 ```
 
 If you want to quickly test if the server is alive, run this command and expect

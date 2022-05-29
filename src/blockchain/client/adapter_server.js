@@ -1,4 +1,10 @@
-var PROTO_PATH = __dirname + '/../proto/two_phase_commit_adapter.proto';
+const args = process.argv.slice(2);
+
+const blockchain_uri = 'ws://localhost:' + args[0];
+const contract_addr = args[1];
+const shared_account = args[2];
+
+const PROTO_PATH = __dirname + '/../proto/two_phase_commit_adapter.proto';
 
 var grpc = require('@grpc/grpc-js');
 var protoLoader = require('@grpc/proto-loader');
@@ -12,8 +18,15 @@ var packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 var two_phase_commit_adapter_proto =
     grpc.loadPackageDefinition(packageDefinition).blockchain;
 
+var TwoPhaseCommitClient = require('./contract_client.js');
+var contractClient = new TwoPhaseCommitClient(
+    '../build/contracts/TwoPhaseCommit.json', blockchain_uri, contract_addr);
+
 function getHeartBeat(call, callback) {
-  callback(null, {is_ok: true});
+  contractClient.getHeartBeat((result) => {
+    console.log('Processed: getHeartBeat');
+    callback(null, {is_ok: result});
+  });
 }
 
 function main() {
