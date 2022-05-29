@@ -94,10 +94,6 @@ contract TwoPhaseCommit {
                     });
             }
         }
-        
-        if (cohorts == votes && cohorts != 0) {
-            return VotingDecision.COMMIT;
-        }
 
         if (cohorts == votes) {
             return
