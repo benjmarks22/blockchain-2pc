@@ -7,15 +7,15 @@ js_library(
 )
 
 js_library(
-    name = "main",
-    srcs = ["main.js"],
+    name = "contract_client_test",
+    srcs = ["contract_client_test.js"],
     deps = [":contract_client"],
 )
 
 sh_binary(
-    name = "main_client",
+    name = "run_contract_client_test",
     srcs = [
-        "main_client.sh",
+        "contract_client_test.sh",
     ],
     args = [
         "$(location //src/blockchain:truffle-config)",
@@ -23,7 +23,7 @@ sh_binary(
         "$(location @blockchain_npm//ganache/bin:ganache)",
     ],
     data = [
-        ":main",
+        ":contract_client_test",
         "//src/blockchain:truffle-config",
         "//src/blockchain/contracts",
         "//src/blockchain/migrations",

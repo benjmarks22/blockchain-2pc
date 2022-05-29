@@ -18,7 +18,7 @@ $ bazel run //src/blockchain:deploy_truffle
 
 Check `contract address` and `account address` for later use.
 
-## Run Blockchain Client Server
+## Run and Test Adapter Server
 
 TODO: Add bazel support.
 
@@ -30,11 +30,11 @@ If you want to quickly test if the server is alive, run this command and expect
 'Is Ok: true' as output:
 
 ```
-$ node adapter_client_demo.js
+$ node adapter_client_test.js
 ```
 
-## Run Demo (No RPC Server / Trying Library Code Only)
+## Test Contract Client Library
 
 ```
-$ bazel run //src/blockchain/client:main_client
+$ bazel run //src/blockchain/client:run_contract_client_test
 ```
