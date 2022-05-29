@@ -54,7 +54,7 @@ class CohortServer : public Cohort::Service {
 
   void CommitTransaction(const std::string& transaction_id);
 
-  absl::Status PersistTransactionResults(const std::string& transaction_id);
+  absl::Status PersistTransaction(const PrepareTransactionRequest& request);
 
   absl::Status ProcessOperationInDb(
       const common::Operation& op, internal::TransactionMetadata& txn_metadata);
@@ -63,7 +63,7 @@ class CohortServer : public Cohort::Service {
       const common::Transaction& transaction, absl::Time presumed_abort_time,
       internal::TransactionMetadata& txn_metadata);
 
-  void CleanUpTransactionMetadata(const std::string& transaction_id);
+  void ReleaseLocksAndDeleteMetadata(const std::string& transaction_id);
 
   absl::flat_hash_map<const std::string, internal::TransactionMetadata>
       metadata_by_transaction_id_;
