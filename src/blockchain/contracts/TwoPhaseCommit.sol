@@ -3,6 +3,7 @@ pragma solidity >=0.4.22 <0.9.0;
 pragma experimental ABIEncoderV2;
 
 contract TwoPhaseCommit {
+    uint256 private ballot_base = 3;
     enum Ballot {
         UNKNOWN,
         COMMIT,
@@ -15,8 +16,9 @@ contract TwoPhaseCommit {
     }
 
     // Voting states of each transaction.
-    // Mapping: transaction_id -> ballot[cohort_id].
-    mapping(string => Ballot[]) private transaction_states;
+    // Mapping: transaction_id -> encoded(ballot[cohort_id]).
+    // We encode ballot[] into an uint256 as dynamic allocation is unsupported.
+    mapping(string => uint256) private transaction_states;
 
     // Configurations of each transaction.
     mapping(string => TransactionConfig) private transaction_configs;
@@ -35,15 +37,12 @@ contract TwoPhaseCommit {
         uint256 vote_timeout_time
     ) public {
         require(cohorts > 0);
+        require(cohorts <= 120); // Otherwise, we can't encode votes into uint256.
         require(getNow() < vote_timeout_time);
         transaction_configs[transaction_id].cohorts = cohorts;
         transaction_configs[transaction_id]
             .vote_timeout_time = vote_timeout_time;
-        // TODO(heronyang): This dynamic allocation fails if we run end-to-end.
-        transaction_states[transaction_id] = new Ballot[](cohorts);
-        for (uint32 i = 0; i < cohorts; i++) {
-            transaction_states[transaction_id][i] = Ballot.UNKNOWN;
-        }
+        transaction_states[transaction_id] = 0;
     }
 
     // Votes if a cohort can commit a transaction.
@@ -57,7 +56,11 @@ contract TwoPhaseCommit {
         );
         require(transaction_configs[transaction_id].cohorts > cohort_id);
         require(ballot != Ballot.UNKNOWN);
-        transaction_states[transaction_id][cohort_id] = ballot;
+        transaction_states[transaction_id] = getNewCohortBallot(
+            transaction_states[transaction_id],
+            cohort_id,
+            ballot
+        );
     }
 
     enum VotingDecisionOption {
@@ -83,10 +86,16 @@ contract TwoPhaseCommit {
         uint32 cohorts = transaction_configs[transaction_id].cohorts;
         uint32 votes = 0;
         for (uint32 i = 0; i < cohorts; i++) {
-            if (transaction_states[transaction_id][i] == Ballot.COMMIT) {
+            if (
+                getCohortBallot(transaction_states[transaction_id], i) ==
+                Ballot.COMMIT
+            ) {
                 votes++;
             }
-            if (transaction_states[transaction_id][i] == Ballot.ABORT) {
+            if (
+                getCohortBallot(transaction_states[transaction_id], i) ==
+                Ballot.ABORT
+            ) {
                 return
                     VotingDecision({
                         option: VotingDecisionOption.ABORT,
@@ -122,6 +131,28 @@ contract TwoPhaseCommit {
     // Called by test only - sets the mock time for now.
     function setMockNow(uint256 new_mock_now) public {
         mock_now = new_mock_now;
+    }
+
+    function getNewCohortBallot(
+        uint256 encoded,
+        uint32 cohort_id,
+        Ballot ballot
+    ) private view returns (uint256) {
+        Ballot original = getCohortBallot(encoded, cohort_id);
+        // Resets the ballot.
+        encoded -= uint32(original) * (ballot_base**cohort_id);
+        // Fills the new ballot.
+        encoded += uint32(ballot) * (ballot_base**cohort_id);
+        return encoded;
+    }
+
+    function getCohortBallot(uint256 encoded, uint32 cohort_id)
+        private
+        view
+        returns (Ballot)
+    {
+        encoded /= ballot_base**cohort_id;
+        return Ballot(encoded % ballot_base);
     }
 
     function getNow() private view returns (uint256) {
