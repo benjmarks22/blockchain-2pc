@@ -1,15 +1,15 @@
 load("@build_bazel_rules_nodejs//:index.bzl", "js_library")
 
 js_library(
-    name = "client",
-    srcs = ["client.js"],
+    name = "contract_client",
+    srcs = ["contract_client.js"],
     deps = ["@blockchain_client_npm//web3-eth-contract"],
 )
 
 js_library(
     name = "main",
     srcs = ["main.js"],
-    deps = [":client"],
+    deps = [":contract_client"],
 )
 
 sh_binary(
