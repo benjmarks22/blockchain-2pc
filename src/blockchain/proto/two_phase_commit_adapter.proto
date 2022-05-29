@@ -1,0 +1,14 @@
+// API for TwoPhaseCommit smart contract adapter service.
+syntax = "proto3";
+
+package blockchain;
+
+message GetHeartBeatRequest {}
+
+message GetHeartBeatResponse {
+  bool is_ok = 1;
+}
+
+service TwoPhaseCommitAdapter {
+  rpc GetHeartBeat(GetHeartBeatRequest) returns (GetHeartBeatResponse) {}
+}
