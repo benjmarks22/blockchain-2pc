@@ -3,9 +3,7 @@ const args = process.argv.slice(2);
 
 const blockchain_uri = 'ws://localhost:' + args[0];
 const contract_addr = args[1];
-// Don't change this since it's the first one in the deterministic ganache
-// client.
-const shared_account = '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1';
+const shared_account = args[2];
 
 const timeout_time = 1672560000;  // unix_time: 1/1/2032 00:00PM
 const transaction_id =
