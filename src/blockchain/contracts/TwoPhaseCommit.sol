@@ -14,8 +14,8 @@ contract TwoPhaseCommit {
     }
 
     // Voting states of each transaction.
-    // Mapping: transaction_id -> cohort_id -> ballot.
-    mapping(string => mapping(uint32 => Ballot)) private transaction_states;
+    // Mapping: transaction_id -> ballot[cohort_id].
+    mapping(string => Ballot[]) private transaction_states;
 
     // Configurations of each transaction.
     mapping(string => TransactionConfig) private transaction_configs;
@@ -32,6 +32,8 @@ contract TwoPhaseCommit {
         transaction_configs[transaction_id].cohorts = cohorts;
         transaction_configs[transaction_id]
             .vote_timeout_time = vote_timeout_time;
+        // TODO(heronyang): This dynamic allocation fails if we run end-to-end.
+        transaction_states[transaction_id] = new Ballot[](cohorts);
         for (uint32 i = 0; i < cohorts; i++) {
             transaction_states[transaction_id][i] = Ballot.ABORT;
         }
@@ -66,7 +68,7 @@ contract TwoPhaseCommit {
                 votes++;
             }
         }
-        if (cohorts == votes) {
+        if (cohorts == votes && cohorts != 0) {
             return VotingDecision.COMMIT;
         }
         return VotingDecision.UNKNOWN;
