@@ -30,7 +30,7 @@ If you want to quickly test if the server is alive, run this command and expect
 'Is Ok: true' as output:
 
 ```
-$ node adapter_client_test.js
+$ node adapter_server_test.js
 ```
 
 ## Test Contract Client Library
