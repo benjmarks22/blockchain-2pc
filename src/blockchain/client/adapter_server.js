@@ -27,7 +27,7 @@ var contractClient = new TwoPhaseCommitClient(
     '../build/contracts/TwoPhaseCommit.json', blockchainUri, contractAddr);
 
 function startVoting(call, callback) {
-  console.log('Received: startVoting');
+  console.log('Received: startVoting', call.request);
   contractClient.startVoting(
       sharedAccount, call.request.transaction_id, call.request.cohorts,
       call.request.timeout_time.seconds, () => {
@@ -37,12 +37,12 @@ function startVoting(call, callback) {
 }
 
 function vote(call, callback) {
-  console.log('Received: vote');
+  console.log('Received: vote', call.request);
   // Convert to int (enum-based) defined in the smart contract (sol).
   var ballot_int = 0;
-  if (call.request.ballot == 'COMMIT') {
+  if (call.request.ballot == 'BALLOT_COMMIT') {
     ballot_int = 1;
-  } else if (call.request.ballot == 'ABORT') {
+  } else if (call.request.ballot == 'BALLOT_ABORT') {
     ballot_int = 2;
   }
   contractClient.vote(
@@ -54,12 +54,28 @@ function vote(call, callback) {
 }
 
 function getVotingDecision(call, callback) {
-  console.log('Received: getVotingDecision');
+  console.log('Received: getVotingDecision', call.request);
+  contractClient.getVotingDecision(call.request.transaction_id, (result) => {
+    console.log('Decision', result);
+    var decision = 'VOTING_DECISION_UNKNOWN';
+    switch (result.charAt(0)) {
+      case '1':
+        decision = 'VOTING_DECISION_PENDING';
+        break;
+      case '2':
+        decision = 'VOTING_DECISION_COMMIT';
+        break;
+      case '3':
+        decision = 'VOTING_DECISION_ABORT';
+        break;
+    };
+    callback(null, {decision: decision, reason: result.substring(2)});
+  });
   console.log('Done: getVotingDecision');
 }
 
 function getHeartBeat(call, callback) {
-  console.log('Received: getHeartBeat');
+  console.log('Received: getHeartBeat', call.request);
   contractClient.getHeartBeat((result) => {
     callback(null, {is_ok: result});
     console.log('Done: getHeartBeat');

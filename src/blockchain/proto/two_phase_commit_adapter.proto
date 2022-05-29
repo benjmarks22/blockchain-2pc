@@ -14,9 +14,9 @@ message StartVotingRequest {
 message StartVotingResponse {}
 
 enum Ballot {
-  UNSPECIFIED = 0;
-  COMMIT = 1;
-  ABORT = 2;
+  BALLOT_UNSPECIFIED = 0;
+  BALLOT_COMMIT = 1;
+  BALLOT_ABORT = 2;
 }
 
 message VoteRequest {
@@ -27,8 +27,21 @@ message VoteRequest {
 
 message VoteResponse {}
 
-message GetVotingDecisionRequest {}
-message GetVotingDecisionResponse {}
+message GetVotingDecisionRequest {
+  string transaction_id = 1;
+}
+
+enum VotingDecision {
+  VOTING_DECISION_UNKNOWN = 0;
+  VOTING_DECISION_PENDING = 1;
+  VOTING_DECISION_COMMIT = 2;
+  VOTING_DECISION_ABORT = 3;
+}
+
+message GetVotingDecisionResponse {
+  VotingDecision decision = 1;
+  string reason = 2;
+}
 
 message GetHeartBeatRequest {}
 message GetHeartBeatResponse {
