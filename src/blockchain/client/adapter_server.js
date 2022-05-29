@@ -4,6 +4,10 @@ const blockchainUri = 'ws://localhost:' + args[0];
 const contractAddr = args[1];
 const sharedAccount = args[2];
 
+console.log('Blockchain URI', blockchainUri);
+console.log('Contract Address', contractAddr);
+console.log('Shared Account', sharedAccount);
+
 const PROTO_PATH = __dirname + '/../proto/two_phase_commit_adapter.proto';
 
 var grpc = require('@grpc/grpc-js');
@@ -24,7 +28,6 @@ var contractClient = new TwoPhaseCommitClient(
 
 function startVoting(call, callback) {
   console.log('Received: startVoting');
-  console.log(call.request);
   contractClient.startVoting(
       sharedAccount, call.request.transaction_id, call.request.cohorts,
       call.request.timeout_time.seconds, () => {
@@ -35,7 +38,19 @@ function startVoting(call, callback) {
 
 function vote(call, callback) {
   console.log('Received: vote');
-  console.log('Done: vote');
+  // Convert to int (enum-based) defined in the smart contract (sol).
+  var ballot_int = 0;
+  if (call.request.ballot == 'COMMIT') {
+    ballot_int = 1;
+  } else if (call.request.ballot == 'ABORT') {
+    ballot_int = 2;
+  }
+  contractClient.vote(
+      sharedAccount, call.request.transaction_id, call.request.cohort_id,
+      ballot_int, () => {
+        console.log('Done: vote');
+        callback(null, {});
+      });
 }
 
 function getVotingDecision(call, callback) {

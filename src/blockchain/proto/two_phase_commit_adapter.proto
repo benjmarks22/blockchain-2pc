@@ -10,9 +10,21 @@ message StartVotingRequest {
   google.protobuf.Timestamp timeout_time = 2;
   uint32 cohorts = 3;
 }
+
 message StartVotingResponse {}
 
-message VoteRequest {}
+enum Ballot {
+  UNSPECIFIED = 0;
+  COMMIT = 1;
+  ABORT = 2;
+}
+
+message VoteRequest {
+  string transaction_id = 1;
+  int32 cohort_id = 2;
+  Ballot ballot = 3;
+}
+
 message VoteResponse {}
 
 message GetVotingDecisionRequest {}

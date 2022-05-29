@@ -26,8 +26,7 @@ TODO: Add bazel support.
 $ node adapter_server.js <PORT> <CONTRACT_ADDRESS> <ACCOUNT>
 ```
 
-If you want to quickly test if the server is alive, run this command and expect
-'Is Ok: true' as output:
+If you want to quickly test if the server is alive, run this command:
 
 ```
 $ node adapter_server_test.js
