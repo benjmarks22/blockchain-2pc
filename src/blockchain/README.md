@@ -11,6 +11,33 @@ Terms are:
 - Truffle: a development environment for Solidify contracts.
 - Ganache: a local blockchain simulator for Truffle to deploy to for testing.
 
+## Overview
+
+This folder contains the following components.
+
+### 1. Contract
+
+Two Phase Commit contract itself lives under `contracts` and its tests (both
+unit-test written in Solidity and end-to-end test written in JavaScript) live
+in `test`. Follow the below instruction to compile, test, and deploy.
+
+### 2. Library Interface > Adapter Service > Contract Client
+
+Once we've deployed the contract, we want to eventually provide a C++ interface
+for upstream to use. As we don't have a good C++ client library for Ethereum
+smart contracts, we implement with an adapter service (local RPC) to help adapt
+C++ interface to JavaScript contract client:
+
+```
+[TwoPhaseCommit (C++ Library Interface)]
+                       v
+[TwoPhaseCommitAdapterService Client (C++ RPC Client)]
+                       v
+[TwoPhaseCommitAdapterService Server (JavaScript RPC Server)]
+                       v
+[TwoPhaseCommitClient (JavaScript Smart Contract Client)]
+```
+
 ## Development
 
 ### Compile
