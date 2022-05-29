@@ -1,0 +1,13 @@
+{
+  "name": "blockchain-client",
+  "version": "1.0.0",
+  "description": "",
+  "main": "main.js",
+  "scripts": {},
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "web3": "^1.7.3",
+    "web3-eth-contract": "^1.7.3"
+  }
+}

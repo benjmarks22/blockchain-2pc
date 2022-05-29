@@ -62,6 +62,13 @@ yarn_install(
     yarn_lock = "//src/blockchain:yarn.lock",
 )
 
+yarn_install(
+    name = "blockchain_client_npm",
+    frozen_lockfile = False,
+    package_json = "//src/blockchain/client:package.json",
+    yarn_lock = "//src/blockchain/client:yarn.lock",
+)
+
 new_git_repository(
     name = "openssl",
     build_file_content = """
