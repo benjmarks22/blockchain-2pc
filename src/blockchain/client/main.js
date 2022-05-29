@@ -1,7 +1,11 @@
 // This script calls TwoPhaseCommitClient to demostrate a successful 2PC case.
-const blockchain_uri = 'ws://localhost:9545';
-const contract_addr = '0x007AEd8EDC5CCdc2b275c5E85284e01199695959';
-const shared_account = '0xf7533e520c218417628fc7d6f08bbef9239a39fd';
+const args = process.argv.slice(2);
+
+const blockchain_uri = 'ws://localhost:' + args[0];
+const contract_addr = args[1];
+// Don't change this since it's the first one in the deterministic ganache
+// client.
+const shared_account = '0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1';
 
 const timeout_time = 1672560000;  // unix_time: 1/1/2032 00:00PM
 const transaction_id =
@@ -19,11 +23,11 @@ client.startVoting(shared_account, transaction_id, 2, timeout_time, () => {
         (result) => {
             console.log('Got Voting Decision (Expect PENDING).', result)});
     client.vote(shared_account, transaction_id, 1, 1, () => {
-      console.log('Client 2st Voted!');
-      client.getVotingDecision(
-          transaction_id,
-          (result) => {
-              console.log('Got Voting Decision (Expect COMMIT).', result)});
+      console.log('Client 2nd Voted!');
+      client.getVotingDecision(transaction_id, (result) => {
+        console.log('Got Voting Decision (Expect COMMIT).', result);
+        process.exit();
+      });
     });
   });
 });

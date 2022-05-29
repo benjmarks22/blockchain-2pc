@@ -9,6 +9,7 @@ js_library(
 js_library(
     name = "main",
     srcs = ["main.js"],
+    deps = [":client"],
 )
 
 sh_binary(
@@ -30,7 +31,7 @@ sh_binary(
         "@blockchain_npm//truffle/bin:truffle",
     ],
     deps = [
-        "//src/blockchain:setup_truffle",
+        "//src/blockchain:deploy_ganache",
         "@bazel_tools//tools/bash/runfiles",
     ],
 )
