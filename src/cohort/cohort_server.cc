@@ -176,7 +176,8 @@ void CohortServer::CommitTransaction(const std::string& transaction_id) {
     if (commit_status.ok()) {
       break;
     }
-    LOG(WARNING) << "Failed to commit transaction " << commit_status;
+    LOG(WARNING) << "Failed to commit transaction " << commit_status
+                 << ". Retrying";
   }
   // This is necessary if it's a write only transaction to ensure the response
   // indicates that it committed.
@@ -221,6 +222,10 @@ void CohortServer::ProcessTransaction(
                      db_status);
     return;
   }
+  if (request.only_cohort()) {
+    CommitTransaction(request.transaction_id());
+    return;
+  }
 
   const absl::Status persist_status = PersistTransaction(request);
   if (!persist_status.ok()) {
@@ -248,8 +253,10 @@ void CohortServer::ProcessTransaction(
 grpc::Status CohortServer::PrepareTransaction(
     ServerContext* /*context*/, const PrepareTransactionRequest* request,
     PrepareTransactionResponse* /*response*/) {
-  thread_pool_.push_task(
-      [this, request]() { return ProcessTransaction(*request); });
+  const PrepareTransactionRequest& request_non_pointer = *request;
+  thread_pool_.push_task([this, request_non_pointer]() {
+    return ProcessTransaction(request_non_pointer);
+  });
   return grpc::Status::OK;
 }
 

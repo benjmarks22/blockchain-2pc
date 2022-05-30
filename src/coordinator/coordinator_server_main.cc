@@ -13,7 +13,7 @@
 
 ABSL_FLAG(std::string, port, "50052", "Port to listen to connections on");
 ABSL_FLAG(
-    std::string, default_presumed_abort_duration, "1m",
+    std::string, default_presumed_abort_duration, "5s",
     "Default duration for the presumed abort time relative to the current "
     "time. Only used if the client does not specify the timestamp.");
 

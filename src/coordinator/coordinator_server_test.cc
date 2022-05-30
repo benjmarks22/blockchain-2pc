@@ -26,10 +26,14 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
       : coordinator::CoordinatorServer(default_presumed_abort_duration) {}
 
   MOCK_METHOD4(MockPrepareCohortTransaction,
-               void(const std::string& transaction_id,
-                    const common::Namespace& namespace_,
-                    const cohort::PrepareTransactionRequest& request,
-                    const grpc::ServerContext& context));
+               std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+                   cohort::PrepareTransactionResponse>>(
+                   const std::string& transaction_id,
+                   const common::Namespace& namespace_,
+                   const cohort::PrepareTransactionRequest& request,
+                   const grpc::ServerContext& context));
+  MOCK_METHOD1(MockFinishPrepareCohortTransaction,
+               grpc::Status(cohort::PrepareTransactionResponse& response));
   MOCK_METHOD1(MockFinishAsyncGetResultsFromCohort,
                grpc::Status(cohort::GetTransactionResultResponse& response));
   MOCK_METHOD4(MockGetResultsFromCohort,
@@ -50,11 +54,20 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
  private:
   bool SortCohortRequests() override { return true; }
   absl::Time Now() override { return MockNow(); }
-  void PrepareCohortTransaction(
-      const std::string& transaction_id, const common::Namespace& namespace_,
-      const cohort::PrepareTransactionRequest& request,
-      const grpc::ServerContext& context) override {
-    MockPrepareCohortTransaction(transaction_id, namespace_, request, context);
+  std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+      cohort::PrepareTransactionResponse>>
+  PrepareCohortTransaction(const std::string& transaction_id,
+                           const common::Namespace& namespace_,
+                           const cohort::PrepareTransactionRequest& request,
+                           const grpc::ServerContext& context) override {
+    return MockPrepareCohortTransaction(transaction_id, namespace_, request,
+                                        context);
+  }
+  grpc::Status FinishPrepareCohortTransaction(
+      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+          cohort::PrepareTransactionResponse>>& /*async_response*/,
+      cohort::PrepareTransactionResponse& response) override {
+    return MockFinishPrepareCohortTransaction(response);
   }
   std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
       cohort::GetTransactionResultResponse>>

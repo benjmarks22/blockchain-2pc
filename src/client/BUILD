@@ -1,23 +1,30 @@
 cc_binary(
-    name = "greeter_client_main",
+    name = "client_main",
     srcs = [
-        "greeter_client_main.cc",
+        "client_main.cc",
     ],
     deps = [
-        ":greeter_client",
+        ":client",
+        "//src/proto:common",
+        "//src/proto:coordinator",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_glog//:glog",
     ],
 )
 
 cc_library(
-    name = "greeter_client",
+    name = "client",
     srcs = [
-        "greeter_client.cc",
-        "greeter_client.h",
+        "client.cc",
+        "client.h",
     ],
-    hdrs = ["greeter_client.h"],
+    hdrs = ["client.h"],
     deps = [
-        "//src/proto:greeter",
+        "//src/proto:common",
+        "//src/proto:coordinator",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/types:variant",
+        "@com_google_glog//:glog",
+        "@thread_pool",
     ],
 )

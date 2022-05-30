@@ -6,6 +6,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "glog/logging.h"
 #include "grpc/grpc.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
@@ -172,6 +173,10 @@ void CoordinatorServer::SendCohortPrepareRequests(
     metadata.single_cohort_namespace = sub_transactions[0].namespace_;
   }
   size_t cohort_index = 0;
+  std::vector<std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+      cohort::PrepareTransactionResponse>>>
+      rpcs;
+  rpcs.reserve(sub_transactions.size());
   for (const SubTransaction &sub_transaction : sub_transactions) {
     if (sub_transactions.size() != 1) {
       prepare_request.set_cohort_index(cohort_index);
@@ -182,12 +187,20 @@ void CoordinatorServer::SendCohortPrepareRequests(
     if (cohort_index == sub_transactions.size() - 1) {
       metadata.possibly_sent_to_all_cohorts = true;
     }
+
+    rpcs.push_back(PrepareCohortTransaction(
+        transaction_id, sub_transaction.namespace_, prepare_request, context));
+    ++cohort_index;
+  }
+  for (auto &rpc : rpcs) {
     // TODO(benjmarks22): Retry failed RPCs.
     // For now the transactions with failed RPCs will abort at the blockchain
     // at the presumed abort time.
-    PrepareCohortTransaction(transaction_id, sub_transaction.namespace_,
-                             prepare_request, context);
-    ++cohort_index;
+    cohort::PrepareTransactionResponse response;
+    grpc::Status status = FinishPrepareCohortTransaction(rpc, response);
+    // Without this line, it does not actually send the request to the cohort.
+    LOG(INFO) << response.DebugString() << " " << status.error_code() << " "
+              << status.error_message();
   }
 }
 
@@ -208,17 +221,28 @@ absl::StatusOr<Blockchain::VotingDecision> CoordinatorServer::GetVotingDecision(
 
 absl::Time CoordinatorServer::Now() { return absl::Now(); }
 
-void CoordinatorServer::PrepareCohortTransaction(
+std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+    cohort::PrepareTransactionResponse>>
+CoordinatorServer::PrepareCohortTransaction(
     const std::string &transaction_id, const Namespace &namespace_,
     const cohort::PrepareTransactionRequest &request,
     const grpc::ServerContext &context) {
   metadata_by_transaction_[transaction_id].contexts.push_back(
       ClientContext::FromServerContext(context));
-  GetCohortStub(namespace_)
+  return GetCohortStub(namespace_)
       .AsyncPrepareTransaction(
           metadata_by_transaction_[transaction_id].contexts.back().get(),
-          request,
-          /*cq = */ nullptr);
+          request, &completion_queue_);
+}
+
+grpc::Status CoordinatorServer::FinishPrepareCohortTransaction(
+    std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+        cohort::PrepareTransactionResponse>> &async_response,
+    cohort::PrepareTransactionResponse &response) {
+  grpc::Status status;
+  async_response->Finish(&response, &status,
+                         /*tag=*/static_cast<void *>(&async_response));
+  return status;
 }
 
 std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
@@ -228,8 +252,7 @@ CoordinatorServer::AsyncGetResultsFromCohort(
     const cohort::GetTransactionResultRequest &request,
     ClientContext &context) {
   return GetCohortStub(namespace_)
-      .AsyncGetTransactionResult(&context, request,
-                                 /*cq=*/nullptr);
+      .AsyncGetTransactionResult(&context, request, &completion_queue_);
 }
 
 grpc::Status CoordinatorServer::FinishAsyncGetResultsFromCohort(
@@ -237,7 +260,8 @@ grpc::Status CoordinatorServer::FinishAsyncGetResultsFromCohort(
         cohort::GetTransactionResultResponse>> &async_response,
     cohort::GetTransactionResultResponse &response) {
   grpc::Status status;
-  async_response->Finish(&response, &status, /*tag=*/nullptr);
+  async_response->Finish(&response, &status,
+                         /*tag=*/static_cast<void *>(&async_response));
   return status;
 }
 
@@ -274,7 +298,9 @@ grpc::Status CoordinatorServer::UpdateResponseForSingleCohortTransaction(
   grpc::Status status = GetResultsFromCohort(
       namespace_, cohort_request, *transaction_result_context, cohort_response);
   if (!status.ok()) {
-    return status;
+    return grpc::Status(
+        status.error_code(),
+        absl::StrCat("Failed to get cohort results", status.error_message()));
   }
   if (cohort_response.has_aborted_response()) {
     *response.mutable_aborted_response()->add_namespaces() = namespace_;
@@ -288,6 +314,7 @@ grpc::Status CoordinatorServer::UpdateResponseForSingleCohortTransaction(
               cohort_response.committed_response().get_responses().end());
     response.mutable_committed_response()->set_complete(true);
   } else {
+    response.mutable_pending_response();
     return grpc::Status::OK;
   }
   CleanUpTransactionMetadata(transaction_id);
