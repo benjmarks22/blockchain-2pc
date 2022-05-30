@@ -9,10 +9,18 @@
 namespace db {
 
 // Abstract Database Interface that supports transaction operations.
+// It does not need to worry about locking keys. It is expected that the caller
+// ensures concurrent transactions do not modify keys used in other put/get
+// transactions.
 class DatabaseTransactionAdapter {
  public:
   DatabaseTransactionAdapter() = default;
   ~DatabaseTransactionAdapter() = default;
+
+  // Returns true if the underlying database supports multiple concurrent
+  // writes. If it does not support concurrent writes, the caller must ensure
+  // only one write transaction is in progress at any given time.
+  [[nodiscard]] virtual /*static*/ bool SupportsConcurrentWrites() const = 0;
 
   // Begins a transaction.
   virtual absl::Status Begin() = 0;
