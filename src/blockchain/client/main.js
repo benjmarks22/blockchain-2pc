@@ -9,7 +9,7 @@ const timeout_time = 1672560000;  // unix_time: 1/1/2032 00:00PM
 const transaction_id =
     new Date().toISOString();  // use current time as transaction id.
 
-var TwoPhaseCommitClient = require('./client.js');
+var TwoPhaseCommitClient = require('./contract_client.js');
 var client = new TwoPhaseCommitClient(
     '../build/contracts/TwoPhaseCommit.json', blockchain_uri, contract_addr);
 client.getHeartBeat(console.log);

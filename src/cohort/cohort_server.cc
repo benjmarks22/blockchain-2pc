@@ -60,6 +60,11 @@ absl::Status CohortServer::AcquireDbLocks(
   absl::flat_hash_set<std::string> readonly_keys;
   for (const common::Operation& op : transaction.ops()) {
     if (op.has_put()) {
+      if (!txn_metadata.db->SupportsConcurrentWrites() &&
+          !txn_metadata.has_whole_db_lock) {
+        whole_db_mutex_.Lock();
+        txn_metadata.has_whole_db_lock = true;
+      }
       readonly_keys.erase(op.put().key());
       write_and_readwrite_keys.emplace(op.put().key());
     }
@@ -280,6 +285,9 @@ void CohortServer::ReleaseLocksAndDeleteMetadata(
   for (const auto& read_key :
        metadata_by_transaction_id_[transaction_id].read_lock_keys) {
     GetLock(read_key).ReaderUnlock();
+  }
+  if (metadata_by_transaction_id_[transaction_id].has_whole_db_lock) {
+    whole_db_mutex_.Unlock();
   }
   // Should be faster than copying the response and the metadata one gets
   // deleted right after.
