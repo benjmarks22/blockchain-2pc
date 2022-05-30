@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package client;
+
+import "google/protobuf/duration.proto";
+
+message SimpleTransaction {
+  google.protobuf.Duration time_before_abort = 1;
+  repeated Operation op = 2;
+  // Whether the client should wait for a response before sending the next
+  // request.
+  bool async = 3;
+}
+
+message Operation {
+  enum OpType {
+    OP_TYPE_UNSPECIFIED = 0;
+    OP_TYPE_GET = 1;
+    OP_TYPE_PUT = 2;
+  }
+  OpType type = 1;
+  oneof address_type {
+    string address = 2;
+    bool random_address = 6;
+  }
+  oneof key_type {
+    string key = 3;
+    bool random_key = 7;
+    // Random from the set of all put keys to this address.
+    bool random_put_key = 8;
+  }
+  // Ignored for get.
+  oneof value_type {
+    int64 value = 4;
+    int64 relative_value = 5;
+    bool random_value = 9;
+    bool random_relative_value = 10;
+  }
+  // Number of distinct ops to
+  int64 repeat_count = 11;
+}
+
+message SimpleTransactions {
+  repeated SimpleTransaction initial_transaction = 1;
+  repeated SimpleTransaction cycle_transaction = 2;
+  int64 cycle_length = 3;
+}

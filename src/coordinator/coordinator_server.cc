@@ -188,19 +188,9 @@ void CoordinatorServer::SendCohortPrepareRequests(
       metadata.possibly_sent_to_all_cohorts = true;
     }
 
-    rpcs.push_back(PrepareCohortTransaction(
-        transaction_id, sub_transaction.namespace_, prepare_request, context));
+    PrepareCohortTransaction(transaction_id, sub_transaction.namespace_,
+                             prepare_request, context);
     ++cohort_index;
-  }
-  for (auto &rpc : rpcs) {
-    // TODO(benjmarks22): Retry failed RPCs.
-    // For now the transactions with failed RPCs will abort at the blockchain
-    // at the presumed abort time.
-    cohort::PrepareTransactionResponse response;
-    grpc::Status status = FinishPrepareCohortTransaction(rpc, response);
-    // Without this line, it does not actually send the request to the cohort.
-    LOG(INFO) << response.DebugString() << " " << status.error_code() << " "
-              << status.error_message();
   }
 }
 
@@ -221,18 +211,17 @@ absl::StatusOr<Blockchain::VotingDecision> CoordinatorServer::GetVotingDecision(
 
 absl::Time CoordinatorServer::Now() { return absl::Now(); }
 
-std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-    cohort::PrepareTransactionResponse>>
-CoordinatorServer::PrepareCohortTransaction(
+void CoordinatorServer::PrepareCohortTransaction(
     const std::string &transaction_id, const Namespace &namespace_,
     const cohort::PrepareTransactionRequest &request,
     const grpc::ServerContext &context) {
   metadata_by_transaction_[transaction_id].contexts.push_back(
       ClientContext::FromServerContext(context));
-  return GetCohortStub(namespace_)
-      .AsyncPrepareTransaction(
+  cohort::PrepareTransactionResponse response;
+  GetCohortStub(namespace_)
+      .PrepareTransaction(
           metadata_by_transaction_[transaction_id].contexts.back().get(),
-          request, &completion_queue_);
+          request, &response);
 }
 
 grpc::Status CoordinatorServer::FinishPrepareCohortTransaction(
@@ -300,7 +289,7 @@ grpc::Status CoordinatorServer::UpdateResponseForSingleCohortTransaction(
   if (!status.ok()) {
     return grpc::Status(
         status.error_code(),
-        absl::StrCat("Failed to get cohort results", status.error_message()));
+        absl::StrCat("Failed to get cohort results: ", status.error_message()));
   }
   if (cohort_response.has_aborted_response()) {
     *response.mutable_aborted_response()->add_namespaces() = namespace_;

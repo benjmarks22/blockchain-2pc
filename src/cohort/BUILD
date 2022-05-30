@@ -4,12 +4,9 @@ cc_binary(
         "cohort_server_main.cc",
     ],
     deps = [
-        ":cohort_server",
-        "//src/db:lmdb_database_transaction_adapter",
-        "@com_github_grpc_grpc//:grpc++",
+        ":start_cohort_server",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
-        "@com_google_absl//absl/strings",
     ],
 )
 
@@ -49,5 +46,21 @@ cc_test(
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@protobuf_matchers//protobuf-matchers",
+    ],
+)
+
+cc_library(
+    name = "start_cohort_server",
+    srcs = [
+        "start_cohort_server.cc",
+        "start_cohort_server.h",
+    ],
+    hdrs = ["start_cohort_server.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":cohort_server",
+        "//src/db:lmdb_database_transaction_adapter",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/strings",
     ],
 )

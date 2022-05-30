@@ -28,7 +28,7 @@ bool Client::TryGetTransactionResults(
     LOG(INFO) << "Still awaiting some results " << response.DebugString();
     return false;
   }
-  LOG(INFO) << "Got final response " << response.DebugString();
+  LOG(INFO) << "Got final response";
   return true;
 }
 

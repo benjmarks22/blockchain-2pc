@@ -58,12 +58,10 @@ class CoordinatorServer : public Coordinator::Service {
 
  private:
   // The virtual methods are so that they can be mocked out for testing.
-  virtual std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-      cohort::PrepareTransactionResponse>>
-  PrepareCohortTransaction(const std::string &transaction_id,
-                           const common::Namespace &namespace_,
-                           const cohort::PrepareTransactionRequest &request,
-                           const grpc::ServerContext &context);
+  virtual void PrepareCohortTransaction(
+      const std::string &transaction_id, const common::Namespace &namespace_,
+      const cohort::PrepareTransactionRequest &request,
+      const grpc::ServerContext &context);
   virtual grpc::Status FinishPrepareCohortTransaction(
       std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
           cohort::PrepareTransactionResponse>> &async_response,
