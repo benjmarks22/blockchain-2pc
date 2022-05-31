@@ -51,20 +51,54 @@ absl::Mutex& CohortServer::GetLock(const std::string& key) {
   return *lock;
 }
 
+absl::Status CohortServer::AcquireWholeDbLock(
+    const common::Transaction& transaction, absl::Time presumed_abort_time,
+    internal::TransactionMetadata& txn_metadata) {
+  bool has_put = false;
+  bool has_get = false;
+  for (const common::Operation& op : transaction.ops()) {
+    if (op.has_put()) {
+      has_put = true;
+    }
+    if (op.has_get()) {
+      has_get = true;
+    }
+    if (has_put && has_get) {
+      break;
+    }
+  }
+  if (has_put) {
+    if (!whole_db_mutex_.WriterLockWhenWithDeadline(absl::Condition::kTrue,
+                                                    presumed_abort_time)) {
+      return absl::DeadlineExceededError(
+          "Could not acquire write lock for the DB before the abort deadline");
+    }
+    txn_metadata.has_whole_db_write_lock = true;
+    return absl::OkStatus();
+  }
+  if (has_get) {
+    if (!whole_db_mutex_.ReaderLockWhenWithDeadline(absl::Condition::kTrue,
+                                                    presumed_abort_time)) {
+      return absl::DeadlineExceededError(
+          "Could not acquire read lock for the DB before the abort deadline");
+    }
+    txn_metadata.has_whole_db_read_lock = true;
+  }
+  return absl::OkStatus();
+}
+
 absl::Status CohortServer::AcquireDbLocks(
     const common::Transaction& transaction, absl::Time presumed_abort_time,
     internal::TransactionMetadata& txn_metadata) {
+  if (!txn_metadata.db->SupportsConcurrentWrites()) {
+    return AcquireWholeDbLock(transaction, presumed_abort_time, txn_metadata);
+  }
   absl::flat_hash_set<std::string> write_and_readwrite_keys;
   // Excludes any keys that are written to as well. Otherwise deadlocks could
   // occur if we wait for both the read and write locks.
   absl::flat_hash_set<std::string> readonly_keys;
   for (const common::Operation& op : transaction.ops()) {
     if (op.has_put()) {
-      if (!txn_metadata.db->SupportsConcurrentWrites() &&
-          !txn_metadata.has_whole_db_lock) {
-        whole_db_mutex_.Lock();
-        txn_metadata.has_whole_db_lock = true;
-      }
       readonly_keys.erase(op.put().key());
       write_and_readwrite_keys.emplace(op.put().key());
     }
@@ -72,6 +106,7 @@ absl::Status CohortServer::AcquireDbLocks(
       readonly_keys.emplace(op.get().key());
     }
   }
+
   for (const auto& read_key : readonly_keys) {
     if (!GetLock(read_key).ReaderLockWhenWithDeadline(absl::Condition::kTrue,
                                                       presumed_abort_time)) {
@@ -132,7 +167,8 @@ absl::Status CohortServer::ProcessTransactionInDb(
     internal::TransactionMetadata& txn_metadata) {
   RETURN_IF_ERROR(
       AcquireDbLocks(transaction, presumed_abort_time, txn_metadata));
-  if (txn_metadata.write_lock_keys.empty()) {
+  if (txn_metadata.write_lock_keys.empty() &&
+      !txn_metadata.has_whole_db_write_lock) {
     RETURN_IF_ERROR(txn_metadata.db->BeginReadOnly());
   } else {
     RETURN_IF_ERROR(txn_metadata.db->Begin());
@@ -181,7 +217,8 @@ void CohortServer::CommitTransaction(const std::string& transaction_id) {
     if (commit_status.ok()) {
       break;
     }
-    LOG(WARNING) << "Failed to commit transaction " << commit_status;
+    LOG(WARNING) << "Failed to commit transaction " << commit_status
+                 << ". Retrying";
   }
   // This is necessary if it's a write only transaction to ensure the response
   // indicates that it committed.
@@ -226,6 +263,10 @@ void CohortServer::ProcessTransaction(
                      db_status);
     return;
   }
+  if (request.only_cohort()) {
+    CommitTransaction(request.transaction_id());
+    return;
+  }
 
   const absl::Status persist_status = PersistTransaction(request);
   if (!persist_status.ok()) {
@@ -253,8 +294,10 @@ void CohortServer::ProcessTransaction(
 grpc::Status CohortServer::PrepareTransaction(
     ServerContext* /*context*/, const PrepareTransactionRequest* request,
     PrepareTransactionResponse* /*response*/) {
-  thread_pool_.push_task(
-      [this, request]() { return ProcessTransaction(*request); });
+  const PrepareTransactionRequest& request_non_pointer = *request;
+  thread_pool_.push_task([this, request_non_pointer]() {
+    return ProcessTransaction(request_non_pointer);
+  });
   return grpc::Status::OK;
 }
 
@@ -279,8 +322,11 @@ void CohortServer::ReleaseLocksAndDeleteMetadata(
        metadata_by_transaction_id_[transaction_id].read_lock_keys) {
     GetLock(read_key).ReaderUnlock();
   }
-  if (metadata_by_transaction_id_[transaction_id].has_whole_db_lock) {
-    whole_db_mutex_.Unlock();
+  if (metadata_by_transaction_id_[transaction_id].has_whole_db_write_lock) {
+    whole_db_mutex_.WriterUnlock();
+  }
+  if (metadata_by_transaction_id_[transaction_id].has_whole_db_read_lock) {
+    whole_db_mutex_.ReaderUnlock();
   }
   // Should be faster than copying the response and the metadata one gets
   // deleted right after.

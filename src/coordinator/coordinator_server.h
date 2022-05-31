@@ -62,6 +62,10 @@ class CoordinatorServer : public Coordinator::Service {
       const std::string &transaction_id, const common::Namespace &namespace_,
       const cohort::PrepareTransactionRequest &request,
       const grpc::ServerContext &context);
+  virtual grpc::Status FinishPrepareCohortTransaction(
+      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
+          cohort::PrepareTransactionResponse>> &async_response,
+      cohort::PrepareTransactionResponse &response);
   virtual std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
       cohort::GetTransactionResultResponse>>
   AsyncGetResultsFromCohort(const common::Namespace &namespace_,
@@ -113,6 +117,7 @@ class CoordinatorServer : public Coordinator::Service {
   absl::flat_hash_map<std::string, internal::TransactionResponse>
       response_by_transaction_;
   absl::Duration default_presumed_abort_duration_;
+  grpc::CompletionQueue completion_queue_;
 };
 
 }  // namespace coordinator

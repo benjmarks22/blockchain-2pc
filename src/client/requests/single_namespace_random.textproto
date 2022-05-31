@@ -1,0 +1,58 @@
+initial_transaction {
+    time_before_abort {
+        seconds: 1
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60000"
+        random_key: true
+        random_value: true
+        repeat_count: 100
+    }
+}
+cycle_length: 10
+cycle_transaction {
+    time_before_abort {
+        seconds: 1
+    }
+    op {
+        type: OP_TYPE_GET
+        address: "0.0.0.0:60000"
+        random_put_key: true
+        repeat_count: 5
+    }
+    # async: true
+}
+cycle_transaction {
+    time_before_abort {
+        seconds: 1
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60000"
+        random_put_key: true
+        random_value: true
+        repeat_count: 5
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60000"
+        random_put_key: true
+        random_value: true
+        repeat_count: 5
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60000"
+        random_put_key: true
+        random_relative_value: true
+        repeat_count: 5
+    }
+    op {
+        type: OP_TYPE_GET
+        address: "0.0.0.0:60000"
+        random_put_key: true
+        repeat_count: 5
+    }
+    # async: true
+}

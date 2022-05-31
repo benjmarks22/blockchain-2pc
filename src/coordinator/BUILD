@@ -4,8 +4,7 @@ cc_binary(
         "coordinator_server_main.cc",
     ],
     deps = [
-        ":coordinator_server",
-        "@com_github_grpc_grpc//:grpc++",
+        ":start_coordinator_server",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
@@ -30,6 +29,7 @@ cc_library(
         "@com_google_absl//absl/container:flat_hash_set",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
+        "@com_google_glog//:glog",
         "@openssl",
         "@thread_pool",
     ],
@@ -49,5 +49,21 @@ cc_test(
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",
         "@protobuf_matchers//protobuf-matchers",
+    ],
+)
+
+cc_library(
+    name = "start_coordinator_server",
+    srcs = [
+        "start_coordinator_server.cc",
+        "start_coordinator_server.h",
+    ],
+    hdrs = ["start_coordinator_server.h"],
+    visibility = ["//visibility:public"],
+    deps = [
+        ":coordinator_server",
+        "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/strings",
+        "@com_google_absl//absl/time",
     ],
 )

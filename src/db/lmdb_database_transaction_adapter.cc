@@ -79,9 +79,14 @@ absl::Status LMDBDatabaseTransactionAdapter::Get(const std::string &key,
     return absl::FailedPreconditionError(
         "No valid transaction available. Please Begin() first.");
   }
-  if (!dbi_->get(*txn_, key, output_value)) {
+  // Need to use lmdb::val for the key to make it able to match the put.
+  // Need to use ldmb::val for the value to make it use the right dbi.get
+  // method.
+  lmdb::val val;
+  if (!dbi_->get(*txn_, lmdb::val(key), val)) {
     return absl::InternalError("Get failed.");
   }
+  output_value = *val.data<int64_t>();
   return absl::OkStatus();
 }
 
@@ -97,7 +102,11 @@ absl::Status LMDBDatabaseTransactionAdapter::Put(const std::string &key,
         "Please Abort() or Commit() the current transaction "
         "and call Begin() instead.");
   }
-  if (!dbi_->put(*txn_, key, value)) {
+  // Need to use lmdb::val for the key to make it able to match the get.
+  // Need to use ldmb::val for the value to make it use the right dbi.put
+  // method.
+  lmdb::val val{&value, sizeof(int64_t)};
+  if (!dbi_->put(*txn_, lmdb::val(key), val)) {
     return absl::InternalError("Put failed.");
   }
   return absl::OkStatus();
