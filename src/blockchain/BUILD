@@ -137,6 +137,9 @@ cc_library(
     hdrs = ["two_phase_commit.h"],
     visibility = ["//visibility:public"],
     deps = [
+        "//src/blockchain/proto:two_phase_commit_adapter",
+        "//src/utils:status_utils",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/status",
         "@com_google_absl//absl/status:statusor",
         "@com_google_absl//absl/strings",
@@ -150,6 +153,7 @@ cc_test(
     ],
     deps = [
         ":two_phase_commit",
+        "//src/blockchain/proto:two_phase_commit_adapter",
         "@com_google_absl//absl/status",
         "@com_google_googletest//:gtest",
         "@com_google_googletest//:gtest_main",

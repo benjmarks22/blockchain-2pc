@@ -24,7 +24,7 @@ struct TransactionMetadata {
   // This indicates that the transaction may have been sent to all the cohorts
   // and thus might commit.
   bool possibly_sent_to_all_cohorts;
-  blockchain::TwoPhaseCommit::VotingDecision decision;
+  blockchain::VotingDecision decision;
   absl::flat_hash_set<std::string> cohorts_already_responded;
   // TODO(benjmarks22): Add locks so that only one thread can access this data
   // at once.
@@ -44,8 +44,11 @@ struct SubTransaction {
 
 class CoordinatorServer : public Coordinator::Service {
  public:
-  explicit CoordinatorServer(absl::Duration default_presumed_abort_duration)
-      : default_presumed_abort_duration_(default_presumed_abort_duration) {}
+  explicit CoordinatorServer(
+      absl::Duration default_presumed_abort_duration,
+      std::unique_ptr<blockchain::TwoPhaseCommit> blockchain)
+      : default_presumed_abort_duration_(default_presumed_abort_duration),
+        blockchain_(blockchain.release()) {}
 
   grpc::Status CommitAtomicTransaction(
       grpc::ServerContext *context,
@@ -81,8 +84,8 @@ class CoordinatorServer : public Coordinator::Service {
       const std::string &transaction_id,
       const google::protobuf::Timestamp &presumed_abort_time,
       size_t num_cohorts);
-  virtual absl::StatusOr<blockchain::TwoPhaseCommit::VotingDecision>
-  GetVotingDecision(const std::string &transaction_id);
+  virtual absl::StatusOr<blockchain::VotingDecision> GetVotingDecision(
+      const std::string &transaction_id);
   virtual cohort::Cohort::StubInterface &GetCohortStub(
       const common::Namespace &namespace_);
   virtual bool SortCohortRequests() { return false; }
@@ -113,6 +116,7 @@ class CoordinatorServer : public Coordinator::Service {
   absl::flat_hash_map<std::string, internal::TransactionResponse>
       response_by_transaction_;
   absl::Duration default_presumed_abort_duration_;
+  std::unique_ptr<blockchain::TwoPhaseCommit> blockchain_;
 };
 
 }  // namespace coordinator

@@ -8,6 +8,8 @@
 namespace utils {
 grpc::Status FromAbslStatus(const absl::Status& status,
                             const std::string& prefix);
+absl::Status FromGrpcStatus(const grpc::Status& status,
+                            const std::string& prefix);
 
 #define ASSIGN_OR_RETURN(lhs, rexpr)         \
   auto result_assign_or_return = rexpr;      \

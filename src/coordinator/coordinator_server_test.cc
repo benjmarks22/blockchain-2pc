@@ -5,6 +5,7 @@
 #include "grpcpp/server_context.h"
 #include "gtest/gtest.h"
 #include "protobuf-matchers/protocol-buffer-matchers.h"
+#include "src/blockchain/proto/two_phase_commit_adapter_mock.grpc.pb.h"
 #include "src/proto/cohort_mock.grpc.pb.h"
 #include "src/proto/common.pb.h"
 #include "src/proto/coordinator.pb.h"
@@ -23,7 +24,11 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
  public:
   explicit CoordinatorWithMockCohorts(
       absl::Duration default_presumed_abort_duration)
-      : coordinator::CoordinatorServer(default_presumed_abort_duration) {}
+      : coordinator::CoordinatorServer(
+            default_presumed_abort_duration,
+            std::make_unique<blockchain::TwoPhaseCommit>(
+                std::make_unique<
+                    blockchain::MockTwoPhaseCommitAdapterStub>())) {}
 
   MOCK_METHOD4(MockPrepareCohortTransaction,
                void(const std::string& transaction_id,
@@ -43,7 +48,7 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
                    const google::protobuf::Timestamp& presumed_abort_time,
                    size_t num_cohorts));
   MOCK_METHOD1(MockGetVotingDecision,
-               absl::StatusOr<blockchain::TwoPhaseCommit::VotingDecision>(
+               absl::StatusOr<blockchain::VotingDecision>(
                    const std::string& transaction_id));
   MOCK_METHOD0(MockNow, absl::Time());
 
@@ -83,7 +88,7 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
       size_t num_cohorts) override {
     return MockStartVoting(transaction_id, presumed_abort_time, num_cohorts);
   }
-  absl::StatusOr<blockchain::TwoPhaseCommit::VotingDecision> GetVotingDecision(
+  absl::StatusOr<blockchain::VotingDecision> GetVotingDecision(
       const std::string& transaction_id) override {
     return MockGetVotingDecision(transaction_id);
   }
@@ -363,7 +368,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommitted) {
       commit_response.global_transaction_id());
   coordinator::GetTransactionResultResponse get_response;
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::COMMIT));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.mutable_committed_response();
   cohort::GetTransactionResultResponse mock_cohort_response2;
@@ -500,7 +505,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenPendingVote) {
   coordinator::GetTransactionResultResponse get_response;
 
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::PENDING));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_PENDING));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response, EquivToProto(R"pb(pending_response {})pb"));
 }
@@ -556,7 +561,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommittedPartialResponse) {
       commit_response.global_transaction_id());
   coordinator::GetTransactionResultResponse get_response;
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::COMMIT));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.mutable_committed_response();
   EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
@@ -588,7 +593,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenAborted) {
       commit_response.global_transaction_id());
   coordinator::GetTransactionResultResponse get_response;
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::ABORT));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_ABORT));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response, EquivToProto(R"pb(aborted_response {})pb"));
 }

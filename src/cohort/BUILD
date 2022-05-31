@@ -5,6 +5,7 @@ cc_binary(
     ],
     deps = [
         ":cohort_server",
+        "//src/blockchain:two_phase_commit",
         "//src/db:lmdb_database_transaction_adapter",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",

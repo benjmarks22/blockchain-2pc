@@ -10,4 +10,10 @@ grpc::Status FromAbslStatus(const absl::Status& status,
   return grpc::Status(static_cast<grpc::StatusCode>(status.raw_code()),
                       absl::StrCat(prefix, std::string(status.message())));
 }
+absl::Status FromGrpcStatus(const grpc::Status& status,
+                            const std::string& prefix) {
+  return absl::Status(
+      static_cast<absl::StatusCode>(status.error_code()),
+      absl::StrCat(prefix, std::string(status.error_message())));
+}
 }  // namespace utils

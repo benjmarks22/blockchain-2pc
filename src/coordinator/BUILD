@@ -5,6 +5,7 @@ cc_binary(
     ],
     deps = [
         ":coordinator_server",
+        "//src/blockchain:two_phase_commit",
         "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
@@ -42,6 +43,7 @@ cc_test(
     ],
     deps = [
         ":coordinator_server",
+        "//src/blockchain/proto:two_phase_commit_adapter",
         "//src/proto:cohort",
         "//src/proto:common",
         "//src/proto:coordinator",

@@ -21,7 +21,6 @@ namespace coordinator {
 
 namespace {
 
-using Blockchain = ::blockchain::TwoPhaseCommit;
 using CohortStub = ::cohort::Cohort::StubInterface;
 using ::common::Namespace;
 using ::coordinator::internal::SubTransaction;
@@ -198,12 +197,12 @@ absl::Status CoordinatorServer::StartVoting(
   const time_t abort_time =
       absl::ToTimeT(absl::FromUnixSeconds(presumed_abort_time.seconds()) +
                     absl::Nanoseconds(presumed_abort_time.nanos()));
-  return Blockchain::StartVoting(transaction_id, abort_time, num_cohorts);
+  return blockchain_->StartVoting(transaction_id, abort_time, num_cohorts);
 }
 
-absl::StatusOr<Blockchain::VotingDecision> CoordinatorServer::GetVotingDecision(
+absl::StatusOr<blockchain::VotingDecision> CoordinatorServer::GetVotingDecision(
     const std::string &transaction_id) {
-  return Blockchain::GetVotingDecision(transaction_id);
+  return blockchain_->GetVotingDecision(transaction_id);
 }
 
 absl::Time CoordinatorServer::Now() { return absl::Now(); }
@@ -379,7 +378,10 @@ grpc::Status CoordinatorServer::GetTransactionResult(
     }
     return status;
   }
-  if (metadata.decision == Blockchain::VotingDecision::PENDING) {
+  if (metadata.decision ==
+          blockchain::VotingDecision::VOTING_DECISION_PENDING ||
+      metadata.decision ==
+          blockchain::VotingDecision::VOTING_DECISION_UNKNOWN) {
     const auto decision_or_status =
         GetVotingDecision(request->global_transaction_id());
     if (!decision_or_status.ok()) {
@@ -389,16 +391,17 @@ grpc::Status CoordinatorServer::GetTransactionResult(
     metadata.decision = decision_or_status.value();
   }
   switch (metadata.decision) {
-    case Blockchain::VotingDecision::PENDING:
+    case blockchain::VotingDecision::VOTING_DECISION_UNKNOWN:
+    case blockchain::VotingDecision::VOTING_DECISION_PENDING:
       response->mutable_pending_response();
       break;
-    case Blockchain::VotingDecision::ABORT:
+    case blockchain::VotingDecision::VOTING_DECISION_ABORT:
       UpdateAbortedResponseFromCohorts(request->global_transaction_id(),
                                        *context);
       *response =
           response_by_transaction_[request->global_transaction_id()].response;
       break;
-    case Blockchain::VotingDecision::COMMIT:
+    case blockchain::VotingDecision::VOTING_DECISION_COMMIT:
       UpdateCommittedResponseFromCohorts(request->global_transaction_id(),
                                          *context);
       *response =
