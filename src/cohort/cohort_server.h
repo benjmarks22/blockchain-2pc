@@ -19,7 +19,8 @@ namespace internal {
 struct TransactionMetadata {
   GetTransactionResultResponse response;
   std::unique_ptr<db::DatabaseTransactionAdapter> db;
-  bool has_whole_db_lock;
+  bool has_whole_db_read_lock;
+  bool has_whole_db_write_lock;
   std::vector<std::string> read_lock_keys;
   std::vector<std::string> write_lock_keys;
 };
@@ -46,6 +47,10 @@ class CohortServer : public Cohort::Service {
 
  private:
   absl::Mutex& GetLock(const std::string& key);
+
+  absl::Status AcquireWholeDbLock(const common::Transaction& transaction,
+                                  absl::Time presumed_abort_time,
+                                  internal::TransactionMetadata& txn_metadata);
 
   absl::Status AcquireDbLocks(const common::Transaction& transaction,
                               absl::Time presumed_abort_time,

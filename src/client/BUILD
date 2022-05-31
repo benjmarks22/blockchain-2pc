@@ -1,23 +1,46 @@
+load("@com_github_grpc_grpc//bazel:grpc_build_system.bzl", "grpc_proto_library")
+
 cc_binary(
-    name = "greeter_client_main",
+    name = "client_main",
     srcs = [
-        "greeter_client_main.cc",
+        "client_main.cc",
     ],
     deps = [
-        ":greeter_client",
+        ":client",
+        "//src/proto:common",
+        "//src/proto:coordinator",
+        "@bazel_tools//tools/cpp/runfiles",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/container:flat_hash_map",
+        "@com_google_absl//absl/container:flat_hash_set",
+        "@com_google_absl//absl/status:statusor",
+        "@com_google_absl//absl/strings",
+        "@com_google_glog//:glog",
     ],
 )
 
 cc_library(
-    name = "greeter_client",
+    name = "client",
     srcs = [
-        "greeter_client.cc",
-        "greeter_client.h",
+        "client.cc",
+        "client.h",
     ],
-    hdrs = ["greeter_client.h"],
+    hdrs = ["client.h"],
+    data = ["//src/client/requests"],
     deps = [
-        "//src/proto:greeter",
+        ":client_proto",
+        "//src/proto:common",
+        "//src/proto:coordinator",
         "@com_github_grpc_grpc//:grpc++",
+        "@com_google_absl//absl/types:variant",
+        "@com_google_glog//:glog",
+        "@thread_pool",
     ],
+)
+
+grpc_proto_library(
+    name = "client_proto",
+    srcs = ["client.proto"],
+    has_services = False,
+    well_known_protos = True,
 )
