@@ -52,3 +52,25 @@ cc_test(
         "@protobuf_matchers//protobuf-matchers",
     ],
 )
+
+sh_binary(
+    name = "start_cohort_with_blockchain_adapter_server",
+    srcs = [
+        "start_cohort_with_blockchain_adapter_server.sh",
+    ],
+    args = [
+        "$(location //src/blockchain:truffle-config)",
+        "$(location @blockchain_npm//truffle/bin:truffle)",
+    ],
+    data = [
+        ":cohort_server_main",
+        "//src/blockchain:compile_command",
+        "//src/blockchain:truffle-config",
+        "//src/blockchain/client:adapter_server_command",
+        "//src/blockchain/client:run_adapter_server_command",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
+    deps = [
+        "@bazel_tools//tools/bash/runfiles",
+    ],
+)

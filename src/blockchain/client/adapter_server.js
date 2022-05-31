@@ -3,10 +3,12 @@ const args = process.argv.slice(2);
 const blockchainUri = 'ws://localhost:' + args[0];
 const contractAddr = args[1];
 const sharedAccount = args[2];
+const port = args[3];
 
 console.log('Blockchain URI', blockchainUri);
 console.log('Contract Address', contractAddr);
 console.log('Shared Account', sharedAccount);
+console.log('Port', port);
 
 const PROTO_PATH = __dirname + '/../proto/two_phase_commit_adapter.proto';
 
@@ -24,7 +26,8 @@ var twoPhaseCommitAdapterProto =
 
 var TwoPhaseCommitClient = require('./contract_client.js');
 var contractClient = new TwoPhaseCommitClient(
-    '../build/contracts/TwoPhaseCommit.json', blockchainUri, contractAddr);
+    'src/blockchain/build/contracts/TwoPhaseCommit.json', blockchainUri,
+    contractAddr);
 
 function startVoting(call, callback) {
   console.log('Received: startVoting', call.request);
@@ -90,9 +93,11 @@ function main() {
     getVotingDecision: getVotingDecision,
     getHeartBeat: getHeartBeat
   });
+  console.log('Starting server')
   server.bindAsync(
-      '0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), () => {
+      '0.0.0.0:' + port, grpc.ServerCredentials.createInsecure(), () => {
         server.start();
+        console.log('Started server');
       });
 }
 

@@ -46,4 +46,12 @@ absl::StatusOr<VotingDecision> TwoPhaseCommit::GetVotingDecision(
   return response.decision();
 }
 
+absl::Status TwoPhaseCommit::GetHeartBeat() {
+  grpc::ClientContext context;
+  GetHeartBeatRequest request;
+  GetHeartBeatResponse response;
+  grpc::Status status = stub_->GetHeartBeat(&context, request, &response);
+  return utils::FromGrpcStatus(status, "Failed to get heartbeat");
+}
+
 }  // namespace blockchain

@@ -132,6 +132,16 @@ new_git_repository(
     remote = "https://github.com/drycpp/lmdbxx.git",
 )
 
+git_repository(
+    name = "com_github_ash2k_bazel_tools",
+    commit = "aefb11464b6b83590e4154a98c29171092ca290f",
+    remote = "https://github.com/ash2k/bazel-tools.git",
+)
+
+load("@com_github_ash2k_bazel_tools//multirun:deps.bzl", "multirun_dependencies")
+
+multirun_dependencies()
+
 load("@hedron_compile_commands//:workspace_setup.bzl", "hedron_compile_commands_setup")
 
 hedron_compile_commands_setup()

@@ -22,15 +22,25 @@ else
 fi
 # --- end runfiles.bash initialization ---
 
-contract_address=$4
-adapter_server_port=${5:-61362}
-cohort_port=${6:-51000}
-# Don't change this since it's the first one in the deterministic ganache client.
-account=${7:-'0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1'}
-blockchain_port=${8:-7545}
-db_data_dir=${9:-'/tmp/data'}
-db_txn_response_dir=${10:-'/tmp/txn_responses'}
-db_thread_ratio=${11:-0.75}
-$(rlocation __main__/src/blockchain/client/run_adapter_server.sh) $contract_address $adapter_server_port $account $blockchain_port &
-sleep 3s
-$(rlocation __main__/src/cohort/cohort_server_main) --port=$cohort_port --blockchain_adapter_port=$adapter_server_port --db_data_dir=$db_data_dir --db_txn_response_dir=$db_txn_response_dir --db_thread_ratio=$db_thread_ratio
+adapter_server_args=()
+cohort_server_args=()
+# Needs to be consistent between JS adapter server and cohort server.
+adapter_server_port=51560
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    --adapter_server_port*) adapter_server_port=${1#*=};;
+    --) shift; break;;
+    *) adapter_server_args+=" $1";;
+  esac
+  shift
+done
+while [ $# -gt 0 ]
+do
+  cohort_server_args+=" $1"
+  shift
+done
+adapter_server_args+=" --adapter_server_port=$adapter_server_port"
+cohort_server_args+=" --blockchain_adapter_port=$adapter_server_port"
+$(rlocation __main__/src/blockchain/client/run_adapter_server_command.bash) $adapter_server_args
+$(rlocation __main__/src/cohort/cohort_server_main) $cohort_server_args
