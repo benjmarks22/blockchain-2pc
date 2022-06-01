@@ -97,7 +97,7 @@ function main() {
   server.bindAsync(
       '0.0.0.0:' + port, grpc.ServerCredentials.createInsecure(), () => {
         server.start();
-        console.log('Started server');
+        console.log('Started blockchain adapter server');
       });
 }
 

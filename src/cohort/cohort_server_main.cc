@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <string>
 #include <thread>
 
@@ -28,6 +29,8 @@ void RunServer(const std::string& port,
                const std::string& blockchain_adapter_port, uint num_db_threads,
                const std::string& db_data_dir,
                const std::string& db_txn_response_dir) {
+  std::filesystem::create_directories(db_data_dir);
+  std::filesystem::create_directories(db_txn_response_dir);
   std::string server_address = absl::StrCat("0.0.0.0:", port);
   std::string blockchain_adapter_address =
       absl::StrCat("0.0.0.0:", blockchain_adapter_port);

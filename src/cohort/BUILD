@@ -1,3 +1,5 @@
+load("@com_github_ash2k_bazel_tools//multirun:def.bzl", "command")
+
 cc_binary(
     name = "cohort_server_main",
     srcs = [
@@ -70,7 +72,26 @@ sh_binary(
         "//src/blockchain/client:run_adapter_server_command",
         "@blockchain_npm//truffle/bin:truffle",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         "@bazel_tools//tools/bash/runfiles",
     ],
+)
+
+command(
+    name = "start_cohort_with_blockchain_adapter_server_command",
+    args = [
+        "$(location //src/blockchain:truffle-config)",
+        "$(location @blockchain_npm//truffle/bin:truffle)",
+    ],
+    command = ":start_cohort_with_blockchain_adapter_server",
+    data = [
+        ":cohort_server_main",
+        "//src/blockchain:compile_command",
+        "//src/blockchain:truffle-config",
+        "//src/blockchain/client:adapter_server_command",
+        "//src/blockchain/client:run_adapter_server_command",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
+    visibility = ["//visibility:public"],
 )

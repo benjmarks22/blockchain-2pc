@@ -43,4 +43,4 @@ done
 adapter_server_args+=" --adapter_server_port=$adapter_server_port"
 cohort_server_args+=" --blockchain_adapter_port=$adapter_server_port"
 $(rlocation __main__/src/blockchain/client/run_adapter_server_command.bash) $adapter_server_args
-$(rlocation __main__/src/cohort/cohort_server_main) $cohort_server_args
+$(rlocation __main__/src/cohort/cohort_server_main) $cohort_server_args &

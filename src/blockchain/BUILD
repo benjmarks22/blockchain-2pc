@@ -88,10 +88,29 @@ sh_library(
         "@blockchain_npm//ganache/bin:ganache",
         "@blockchain_npm//truffle/bin:truffle",
     ],
+    visibility = ["//visibility:public"],
     deps = [
         ":setup_truffle",
         "@bazel_tools//tools/bash/runfiles",
     ],
+)
+
+command(
+    name = "deploy_ganache_command",
+    args = [
+        "$(location :truffle-config)",
+        "$(location @blockchain_npm//truffle/bin:truffle)",
+        "$(location @blockchain_npm//ganache/bin:ganache)",
+    ],
+    command = ":deploy_ganache_with_console",
+    data = [
+        ":truffle-config",
+        "//src/blockchain/contracts",
+        "//src/blockchain/migrations",
+        "@blockchain_npm//ganache/bin:ganache",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
+    visibility = ["//visibility:public"],
 )
 
 sh_binary(

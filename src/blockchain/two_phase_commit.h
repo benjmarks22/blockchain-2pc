@@ -20,8 +20,12 @@ class TwoPhaseCommit {
  public:
   explicit TwoPhaseCommit(std::shared_ptr<grpc::Channel> channel)
       : TwoPhaseCommit(TwoPhaseCommitAdapter::NewStub(channel)) {
+    int failure_count = 0;
     while (!GetHeartBeat().ok()) {
-      LOG(INFO) << "Failed to get heartbeat. Waiting another second.";
+      ++failure_count;
+      if (failure_count % 10 == 0) {
+        LOG(INFO) << "Still waiting for blockchain adapter server";
+      }
       std::this_thread::sleep_for(absl::ToChronoSeconds(absl::Seconds(1)));
     }
   }

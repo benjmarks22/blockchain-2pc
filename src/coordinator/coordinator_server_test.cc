@@ -35,8 +35,6 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
                     const common::Namespace& namespace_,
                     const cohort::PrepareTransactionRequest& request,
                     const grpc::ServerContext& context));
-  MOCK_METHOD1(MockFinishAsyncGetResultsFromCohort,
-               grpc::Status(cohort::GetTransactionResultResponse& response));
   MOCK_METHOD4(MockGetResultsFromCohort,
                grpc::Status(const common::Namespace& namespace_,
                             const cohort::GetTransactionResultRequest& request,
@@ -60,20 +58,6 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
       const cohort::PrepareTransactionRequest& request,
       const grpc::ServerContext& context) override {
     MockPrepareCohortTransaction(transaction_id, namespace_, request, context);
-  }
-  std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-      cohort::GetTransactionResultResponse>>
-  AsyncGetResultsFromCohort(
-      const common::Namespace& /*namespace_*/,
-      const cohort::GetTransactionResultRequest& /*request*/,
-      grpc::ClientContext& /*context*/) override {
-    return nullptr;
-  }
-  grpc::Status FinishAsyncGetResultsFromCohort(
-      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-          cohort::GetTransactionResultResponse>>& /*async_response*/,
-      cohort::GetTransactionResultResponse& response) override {
-    return MockFinishAsyncGetResultsFromCohort(response);
   }
   grpc::Status GetResultsFromCohort(
       const common::Namespace& namespace_,
@@ -377,10 +361,10 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommitted) {
   cohort_get_response->mutable_get()->set_key("b");
   cohort_get_response->mutable_namespace_()->set_address("namespace2");
   cohort_get_response->mutable_value()->set_int64_value(3);
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response2),
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response2),
                       Return(grpc::Status::OK)));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response,
@@ -564,8 +548,8 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommittedPartialResponse) {
       .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.mutable_committed_response();
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)))
       .WillOnce(
           Return(grpc::Status(grpc::DEADLINE_EXCEEDED, "Deadline exceeded")));

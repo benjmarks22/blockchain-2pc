@@ -35,8 +35,6 @@ while [ $# -gt 0 ]
 do
   flag=${1%%=*}
   value="${1#*=}"
-  echo $flag
-  echo $value
   case "$flag" in
     --contract_address*) contract_address="$value";;
     --adapter_server_port*) adapter_server_port="$value";;

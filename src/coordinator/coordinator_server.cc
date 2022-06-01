@@ -172,10 +172,6 @@ void CoordinatorServer::SendCohortPrepareRequests(
     metadata.single_cohort_namespace = sub_transactions[0].namespace_;
   }
   size_t cohort_index = 0;
-  std::vector<std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-      cohort::PrepareTransactionResponse>>>
-      rpcs;
-  rpcs.reserve(sub_transactions.size());
   for (const SubTransaction &sub_transaction : sub_transactions) {
     if (sub_transactions.size() != 1) {
       prepare_request.set_cohort_index(cohort_index);
@@ -221,36 +217,6 @@ void CoordinatorServer::PrepareCohortTransaction(
       .PrepareTransaction(
           metadata_by_transaction_[transaction_id].contexts.back().get(),
           request, &response);
-}
-
-grpc::Status CoordinatorServer::FinishPrepareCohortTransaction(
-    std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-        cohort::PrepareTransactionResponse>> &async_response,
-    cohort::PrepareTransactionResponse &response) {
-  grpc::Status status;
-  async_response->Finish(&response, &status,
-                         /*tag=*/static_cast<void *>(&async_response));
-  return status;
-}
-
-std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-    cohort::GetTransactionResultResponse>>
-CoordinatorServer::AsyncGetResultsFromCohort(
-    const Namespace &namespace_,
-    const cohort::GetTransactionResultRequest &request,
-    ClientContext &context) {
-  return GetCohortStub(namespace_)
-      .AsyncGetTransactionResult(&context, request, /*cq=*/nullptr);
-}
-
-grpc::Status CoordinatorServer::FinishAsyncGetResultsFromCohort(
-    std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-        cohort::GetTransactionResultResponse>> &async_response,
-    cohort::GetTransactionResultResponse &response) {
-  grpc::Status status;
-  async_response->Finish(&response, &status,
-                         /*tag=*/static_cast<void *>(&async_response));
-  return status;
 }
 
 grpc::Status CoordinatorServer::GetResultsFromCohort(
@@ -322,32 +288,20 @@ void CoordinatorServer::UpdateCommittedResponseFromCohorts(
       response_by_transaction_[transaction_id].response;
   cohort::GetTransactionResultRequest cohort_request;
   cohort_request.set_transaction_id(transaction_id);
-  std::vector<std::unique_ptr<ClientContext>> transaction_result_contexts;
-  absl::flat_hash_map<std::string,
-                      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-                          cohort::GetTransactionResultResponse>>>
-      async_responses_by_namespace;
   size_t num_committed_responses = 0;
   for (const auto &namespace_ :
        metadata_by_transaction_[transaction_id].cohort_namespaces) {
     if (metadata_by_transaction_[transaction_id]
             .cohorts_already_responded.contains(namespace_.address())) {
       ++num_committed_responses;
-    } else {
-      transaction_result_contexts.push_back(
-          ClientContext::FromServerContext(context));
-      // TODO(benjmarks22): Figure out how to get async requests to work
-      // properly. For now, use synchronous requests.
-      async_responses_by_namespace[namespace_.address()] =
-          AsyncGetResultsFromCohort(namespace_, cohort_request,
-                                    *transaction_result_contexts.back());
+      continue;
     }
-  }
-  for (auto &namespace_and_response : async_responses_by_namespace) {
+    std::unique_ptr<ClientContext> cohort_context =
+        ClientContext::FromServerContext(context);
     cohort::GetTransactionResultResponse cohort_response;
-    grpc::Status status = FinishAsyncGetResultsFromCohort(
-        namespace_and_response.second, cohort_response);
-    if (status.ok() && cohort_response.has_committed_response()) {
+    grpc::Status cohort_status = GetResultsFromCohort(
+        namespace_, cohort_request, *cohort_context, cohort_response);
+    if (cohort_status.ok() && cohort_response.has_committed_response()) {
       ++num_committed_responses;
       response.mutable_committed_response()
           ->mutable_response()
@@ -355,7 +309,7 @@ void CoordinatorServer::UpdateCommittedResponseFromCohorts(
           ->Add(cohort_response.committed_response().get_responses().begin(),
                 cohort_response.committed_response().get_responses().end());
       metadata_by_transaction_[transaction_id]
-          .cohorts_already_responded.emplace(namespace_and_response.first);
+          .cohorts_already_responded.emplace(namespace_.address());
     }
   }
   if (num_committed_responses ==

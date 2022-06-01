@@ -26,6 +26,8 @@ class Client {
   ResponseOrStatus CommitSync(
       const coordinator::CommitAtomicTransactionRequest& request);
 
+  void WaitForCoordinator();
+
  private:
   bool TryGetTransactionResults(
       const coordinator::GetTransactionResultRequest& request,

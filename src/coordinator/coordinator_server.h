@@ -65,19 +65,6 @@ class CoordinatorServer : public Coordinator::Service {
       const std::string &transaction_id, const common::Namespace &namespace_,
       const cohort::PrepareTransactionRequest &request,
       const grpc::ServerContext &context);
-  virtual grpc::Status FinishPrepareCohortTransaction(
-      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-          cohort::PrepareTransactionResponse>> &async_response,
-      cohort::PrepareTransactionResponse &response);
-  virtual std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-      cohort::GetTransactionResultResponse>>
-  AsyncGetResultsFromCohort(const common::Namespace &namespace_,
-                            const cohort::GetTransactionResultRequest &request,
-                            grpc::ClientContext &context);
-  virtual grpc::Status FinishAsyncGetResultsFromCohort(
-      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-          cohort::GetTransactionResultResponse>> &async_response,
-      cohort::GetTransactionResultResponse &response);
   virtual grpc::Status GetResultsFromCohort(
       const common::Namespace &namespace_,
       const cohort::GetTransactionResultRequest &request,
