@@ -5,6 +5,7 @@
 #include "grpcpp/server_context.h"
 #include "gtest/gtest.h"
 #include "protobuf-matchers/protocol-buffer-matchers.h"
+#include "src/blockchain/proto/two_phase_commit_adapter_mock.grpc.pb.h"
 #include "src/proto/cohort_mock.grpc.pb.h"
 #include "src/proto/common.pb.h"
 #include "src/proto/coordinator.pb.h"
@@ -23,15 +24,17 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
  public:
   explicit CoordinatorWithMockCohorts(
       absl::Duration default_presumed_abort_duration)
-      : coordinator::CoordinatorServer(default_presumed_abort_duration) {}
+      : coordinator::CoordinatorServer(
+            default_presumed_abort_duration,
+            std::make_unique<blockchain::TwoPhaseCommit>(
+                std::make_unique<
+                    blockchain::MockTwoPhaseCommitAdapterStub>())) {}
 
   MOCK_METHOD4(MockPrepareCohortTransaction,
                void(const std::string& transaction_id,
                     const common::Namespace& namespace_,
                     const cohort::PrepareTransactionRequest& request,
                     const grpc::ServerContext& context));
-  MOCK_METHOD1(MockFinishAsyncGetResultsFromCohort,
-               grpc::Status(cohort::GetTransactionResultResponse& response));
   MOCK_METHOD4(MockGetResultsFromCohort,
                grpc::Status(const common::Namespace& namespace_,
                             const cohort::GetTransactionResultRequest& request,
@@ -43,7 +46,7 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
                    const google::protobuf::Timestamp& presumed_abort_time,
                    size_t num_cohorts));
   MOCK_METHOD1(MockGetVotingDecision,
-               absl::StatusOr<blockchain::TwoPhaseCommit::VotingDecision>(
+               absl::StatusOr<blockchain::VotingDecision>(
                    const std::string& transaction_id));
   MOCK_METHOD0(MockNow, absl::Time());
 
@@ -55,20 +58,6 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
       const cohort::PrepareTransactionRequest& request,
       const grpc::ServerContext& context) override {
     MockPrepareCohortTransaction(transaction_id, namespace_, request, context);
-  }
-  std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-      cohort::GetTransactionResultResponse>>
-  AsyncGetResultsFromCohort(
-      const common::Namespace& /*namespace_*/,
-      const cohort::GetTransactionResultRequest& /*request*/,
-      grpc::ClientContext& /*context*/) override {
-    return nullptr;
-  }
-  grpc::Status FinishAsyncGetResultsFromCohort(
-      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-          cohort::GetTransactionResultResponse>>& /*async_response*/,
-      cohort::GetTransactionResultResponse& response) override {
-    return MockFinishAsyncGetResultsFromCohort(response);
   }
   grpc::Status GetResultsFromCohort(
       const common::Namespace& namespace_,
@@ -83,7 +72,7 @@ class CoordinatorWithMockCohorts : public coordinator::CoordinatorServer {
       size_t num_cohorts) override {
     return MockStartVoting(transaction_id, presumed_abort_time, num_cohorts);
   }
-  absl::StatusOr<blockchain::TwoPhaseCommit::VotingDecision> GetVotingDecision(
+  absl::StatusOr<blockchain::VotingDecision> GetVotingDecision(
       const std::string& transaction_id) override {
     return MockGetVotingDecision(transaction_id);
   }
@@ -363,7 +352,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommitted) {
       commit_response.global_transaction_id());
   coordinator::GetTransactionResultResponse get_response;
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::COMMIT));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.mutable_committed_response();
   cohort::GetTransactionResultResponse mock_cohort_response2;
@@ -372,10 +361,10 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommitted) {
   cohort_get_response->mutable_get()->set_key("b");
   cohort_get_response->mutable_namespace_()->set_address("namespace2");
   cohort_get_response->mutable_value()->set_int64_value(3);
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response2),
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response2),
                       Return(grpc::Status::OK)));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response,
@@ -500,7 +489,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenPendingVote) {
   coordinator::GetTransactionResultResponse get_response;
 
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::PENDING));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_PENDING));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response, EquivToProto(R"pb(pending_response {})pb"));
 }
@@ -556,11 +545,11 @@ TEST(CoordinatorServerTest, GetsResultsWhenCommittedPartialResponse) {
       commit_response.global_transaction_id());
   coordinator::GetTransactionResultResponse get_response;
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::COMMIT));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_COMMIT));
   cohort::GetTransactionResultResponse mock_cohort_response;
   mock_cohort_response.mutable_committed_response();
-  EXPECT_CALL(server, MockFinishAsyncGetResultsFromCohort(_))
-      .WillOnce(DoAll(SetArgReferee<0>(mock_cohort_response),
+  EXPECT_CALL(server, MockGetResultsFromCohort(_, _, _, _))
+      .WillOnce(DoAll(SetArgReferee<3>(mock_cohort_response),
                       Return(grpc::Status::OK)))
       .WillOnce(
           Return(grpc::Status(grpc::DEADLINE_EXCEEDED, "Deadline exceeded")));
@@ -588,7 +577,7 @@ TEST(CoordinatorServerTest, GetsResultsWhenAborted) {
       commit_response.global_transaction_id());
   coordinator::GetTransactionResultResponse get_response;
   EXPECT_CALL(server, MockGetVotingDecision(_))
-      .WillOnce(Return(blockchain::TwoPhaseCommit::VotingDecision::ABORT));
+      .WillOnce(Return(blockchain::VotingDecision::VOTING_DECISION_ABORT));
   EXPECT_OK(server.GetTransactionResult(&context, &get_request, &get_response));
   EXPECT_THAT(get_response, EquivToProto(R"pb(aborted_response {})pb"));
 }

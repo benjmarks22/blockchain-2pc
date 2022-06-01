@@ -5,6 +5,7 @@
 #include "grpcpp/server_context.h"
 #include "gtest/gtest.h"
 #include "protobuf-matchers/protocol-buffer-matchers.h"
+#include "src/blockchain/proto/two_phase_commit_adapter_mock.grpc.pb.h"
 #include "src/db/database_transaction_adapter.h"
 #include "src/proto/cohort.pb.h"
 #include "src/proto/common.pb.h"
@@ -112,8 +113,10 @@ TEST(CohortServerTest, GetRequestForNotFoundAborts) {
   operation->mutable_get()->set_key("a");
   absl::Mutex data_mutex;
   absl::flat_hash_map<std::string, int64_t> data;
-  cohort::CohortServer server(1, "/tmp/txn_responses",
-                              GetDbCreatorFunc(data, data_mutex));
+  cohort::CohortServer server(
+      1, "/tmp/txn_responses", GetDbCreatorFunc(data, data_mutex),
+      std::make_unique<blockchain::TwoPhaseCommit>(
+          std::make_unique<blockchain::MockTwoPhaseCommitAdapterStub>()));
   EXPECT_TRUE(
       server.PrepareTransaction(&context, &prepare_request, &prepare_response)
           .ok());

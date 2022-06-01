@@ -55,6 +55,23 @@ ResponseOrStatus Client::GetTransactionResults(
   return grpc::Status::OK;
 }
 
+void Client::WaitForCoordinator() {
+  coordinator::CommitAtomicTransactionRequest request;
+  request.set_client_transaction_id("id");
+  while (true) {
+    grpc::ClientContext prepare_context;
+    coordinator::CommitAtomicTransactionResponse prepare_response;
+    const grpc::Status prepare_status = stub_->CommitAtomicTransaction(
+        &prepare_context, request, &prepare_response);
+    if (prepare_status.error_code() != grpc::UNAVAILABLE) {
+      LOG(INFO) << "Coordinator is now ready";
+      return;
+    }
+    LOG(INFO) << "Coordinator unavailable. Waiting another second.";
+    std::this_thread::sleep_for(absl::ToChronoSeconds(absl::Seconds(1)));
+  }
+}
+
 std::future<ResponseOrStatus> Client::CommitAsync(
     const coordinator::CommitAtomicTransactionRequest& request) {
   grpc::ClientContext prepare_context;

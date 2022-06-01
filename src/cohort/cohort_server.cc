@@ -18,22 +18,6 @@ namespace {
 using Blockchain = ::blockchain::TwoPhaseCommit;
 using ::grpc::ServerContext;
 
-Blockchain::VotingDecision WaitForBlockchainDecision(
-    const std::string& transaction_id, absl::Time presumed_abort_time) {
-  std::this_thread::sleep_until(absl::ToChronoTime(presumed_abort_time));
-  Blockchain::VotingDecision decision =
-      Blockchain::GetVotingDecision(transaction_id)
-          .value_or(Blockchain::VotingDecision::PENDING);
-  while (decision == Blockchain::VotingDecision::PENDING) {
-    VLOG(1) << "Waiting for blockchain decision";
-    std::this_thread::sleep_for(
-        absl::ToChronoMicroseconds(absl::Now() - presumed_abort_time));
-    decision = Blockchain::GetVotingDecision(transaction_id)
-                   .value_or(Blockchain::VotingDecision::PENDING);
-  }
-  return decision;
-}
-
 template <typename Message>
 bool WriteToFile(const Message& message, const std::string& path) {
   std::fstream output(path, std::ios::out | std::ios::trunc | std::ios::binary);
@@ -179,6 +163,28 @@ absl::Status CohortServer::ProcessTransactionInDb(
   return absl::OkStatus();
 }
 
+blockchain::VotingDecision CohortServer::WaitForBlockchainDecision(
+    const std::string& transaction_id, absl::Time presumed_abort_time) {
+  bool waited_until_presumed_abort_time = false;
+  while (true) {
+    const blockchain::VotingDecision decision =
+        blockchain_->GetVotingDecision(transaction_id)
+            .value_or(blockchain::VotingDecision::VOTING_DECISION_PENDING);
+    if (decision != blockchain::VotingDecision::VOTING_DECISION_PENDING &&
+        decision != blockchain::VotingDecision::VOTING_DECISION_UNKNOWN) {
+      return decision;
+    }
+    VLOG(1) << "Waiting for blockchain decision";
+    if (waited_until_presumed_abort_time) {
+      std::this_thread::sleep_for(
+          absl::ToChronoMicroseconds(absl::Now() - presumed_abort_time));
+    } else {
+      std::this_thread::sleep_until(absl::ToChronoTime(presumed_abort_time));
+      waited_until_presumed_abort_time = true;
+    }
+  }
+}
+
 void CohortServer::AbortTransaction(const std::string& transaction_id,
                                     int cohort_index,
                                     absl::optional<absl::Status> abort_status) {
@@ -187,7 +193,8 @@ void CohortServer::AbortTransaction(const std::string& transaction_id,
     LOG(INFO) << "Aborting due to " << abort_status.value();
     // It's okay if it fails since it will auto-abort at the presumed abort
     // time.
-    Blockchain::Vote(transaction_id, cohort_index, Blockchain::Ballot::ABORT)
+    blockchain_
+        ->Vote(transaction_id, cohort_index, blockchain::Ballot::BALLOT_ABORT)
         .IgnoreError();
     switch (abort_status->code()) {
       case absl::StatusCode::kDeadlineExceeded:
@@ -278,12 +285,13 @@ void CohortServer::ProcessTransaction(
   // It's not safe to abort if there's an error here since the blockchain may
   // have accepted our commit vote and decided to commit the transaction.
   // TODO(benjmarks22): Add retry logic here.
-  Blockchain::Vote(request.transaction_id(), request.cohort_index(),
-                   Blockchain::Ballot::COMMIT)
+  blockchain_
+      ->Vote(request.transaction_id(), request.cohort_index(),
+             blockchain::Ballot::BALLOT_COMMIT)
       .IgnoreError();
   if (WaitForBlockchainDecision(request.transaction_id(),
                                 presumed_abort_time) ==
-      Blockchain::VotingDecision::COMMIT) {
+      blockchain::VotingDecision::VOTING_DECISION_COMMIT) {
     CommitTransaction(request.transaction_id());
   } else {
     AbortTransaction(request.transaction_id(), request.cohort_index(),

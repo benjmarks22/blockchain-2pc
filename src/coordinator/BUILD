@@ -1,10 +1,14 @@
+load("@com_github_ash2k_bazel_tools//multirun:def.bzl", "command")
+
 cc_binary(
     name = "coordinator_server_main",
     srcs = [
         "coordinator_server_main.cc",
     ],
     deps = [
-        ":start_coordinator_server",
+        ":coordinator_server",
+        "//src/blockchain:two_phase_commit",
+        "@com_github_grpc_grpc//:grpc++",
         "@com_google_absl//absl/flags:flag",
         "@com_google_absl//absl/flags:parse",
         "@com_google_absl//absl/strings",
@@ -42,6 +46,7 @@ cc_test(
     ],
     deps = [
         ":coordinator_server",
+        "//src/blockchain/proto:two_phase_commit_adapter",
         "//src/proto:cohort",
         "//src/proto:common",
         "//src/proto:coordinator",
@@ -52,18 +57,43 @@ cc_test(
     ],
 )
 
-cc_library(
-    name = "start_coordinator_server",
+sh_binary(
+    name = "start_coordinator_with_blockchain_adapter_server",
     srcs = [
-        "start_coordinator_server.cc",
-        "start_coordinator_server.h",
+        "start_coordinator_with_blockchain_adapter_server.sh",
     ],
-    hdrs = ["start_coordinator_server.h"],
+    args = [
+        "$(location //src/blockchain:truffle-config)",
+        "$(location @blockchain_npm//truffle/bin:truffle)",
+    ],
+    data = [
+        ":coordinator_server_main",
+        "//src/blockchain:compile_command",
+        "//src/blockchain:truffle-config",
+        "//src/blockchain/client:adapter_server_command",
+        "//src/blockchain/client:run_adapter_server_command",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
     visibility = ["//visibility:public"],
     deps = [
-        ":coordinator_server",
-        "@com_github_grpc_grpc//:grpc++",
-        "@com_google_absl//absl/strings",
-        "@com_google_absl//absl/time",
+        "@bazel_tools//tools/bash/runfiles",
     ],
+)
+
+command(
+    name = "start_coordinator_with_blockchain_adapter_server_command",
+    args = [
+        "$(location //src/blockchain:truffle-config)",
+        "$(location @blockchain_npm//truffle/bin:truffle)",
+    ],
+    command = ":start_coordinator_with_blockchain_adapter_server",
+    data = [
+        ":coordinator_server_main",
+        "//src/blockchain:compile_command",
+        "//src/blockchain:truffle-config",
+        "//src/blockchain/client:adapter_server_command",
+        "//src/blockchain/client:run_adapter_server_command",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
+    visibility = ["//visibility:public"],
 )

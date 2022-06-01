@@ -5,6 +5,7 @@
 
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
+#include "absl/flags/flag.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
@@ -16,13 +17,13 @@
 #include "grpcpp/security/credentials.h"
 #include "src/client/client.h"
 #include "src/client/client.pb.h"
-#include "src/cohort/start_cohort_server.h"
-#include "src/coordinator/start_coordinator_server.h"
 #include "src/proto/common.pb.h"
 #include "src/proto/coordinator.grpc.pb.h"
-#include "tools/cpp/runfiles/runfiles.h"
 
-constexpr char* kCoordinatorPort = "58000";
+ABSL_FLAG(std::string, coordinator_port, "58000",
+          "Port to send requests to the coordinator");
+ABSL_FLAG(std::string, request_file_prefix, "two_namespaces_simple",
+          "Prefix of filename with requests to send to the coordinator");
 
 struct RunInfo {
   absl::flat_hash_set<std::string> cohort_addresses;
@@ -196,32 +197,14 @@ void LogResponseOrStatus(const client::ResponseOrStatus& response_or_status) {
   }
 }
 
-void InitializeServers(
-    const absl::flat_hash_set<std::string>& cohort_addresses) {
-  for (const std::string& address : cohort_addresses) {
-    if (address.substr(0, 8) == "0.0.0.0:") {
-      const std::string port = address.substr(8);
-      pid_t pid = fork();
-      if (pid == 0) {
-        cohort::RunServer(port, /*num_db_threads=*/2,
-                          absl::StrCat("/tmp/data/", port),
-                          absl::StrCat("/tmp/txn_responses/", port));
-      }
-    }
-  }
-  pid_t pid = fork();
-  if (pid == 0) {
-    coordinator::RunServer(
-        kCoordinatorPort, /*default_presumed_abort_duration=*/absl::Minutes(1));
-  }
-}
-
 void SendRequests(
+    const std::string& coordinator_port,
     std::vector<std::pair<coordinator::CommitAtomicTransactionRequest, bool>>&
         requests) {
   client::Client client(
-      grpc::CreateChannel(absl::StrCat("0.0.0.0:", kCoordinatorPort),
+      grpc::CreateChannel(absl::StrCat("0.0.0.0:", coordinator_port),
                           grpc::InsecureChannelCredentials()));
+  client.WaitForCoordinator();
   std::vector<std::future<client::ResponseOrStatus>> futures;
   for (std::pair<coordinator::CommitAtomicTransactionRequest, bool>& request :
        requests) {
@@ -245,14 +228,13 @@ void SendRequests(
 int main(int /*argc*/, char** /*argv*/) {
   try {
     absl::StatusOr<RunInfo> run_info = CreateRunInfoFromFile(
-        "src/client/requests/single_namespace_random.textproto");
+        absl::StrCat("src/client/requests/",
+                     absl::GetFlag(FLAGS_request_file_prefix), ".textproto"));
     if (!run_info.ok()) {
       LOG(ERROR) << run_info.status();
       exit(EXIT_FAILURE);
     }
-    InitializeServers(run_info->cohort_addresses);
-    std::this_thread::sleep_for(std::chrono::seconds(2));
-    SendRequests(run_info->requests);
+    SendRequests(absl::GetFlag(FLAGS_coordinator_port), run_info->requests);
   } catch (std::exception& exc) {
     std::cerr << exc.what() << std::endl;
     exit(EXIT_FAILURE);
