@@ -21,6 +21,8 @@ class LMDBDatabaseTransactionAdapter : public DatabaseTransactionAdapter {
 
   ~LMDBDatabaseTransactionAdapter() = default;
 
+  [[nodiscard]] bool SupportsConcurrentWrites() const final { return false; }
+
   // Begins a read-write transaction.
   absl::Status Begin() final;
 

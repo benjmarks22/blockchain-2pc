@@ -1,0 +1,32 @@
+initial_transaction {
+    time_before_abort {
+        seconds: 10
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60001"
+        key: "foo"
+        value: 3
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60002"
+        key: "bar"
+        value: 5
+    }
+}
+initial_transaction {
+    time_before_abort {
+        seconds: 10
+    }
+    op {
+        type: OP_TYPE_GET
+        address: "0.0.0.0:60001"
+        key: "foo"
+    }
+    op {
+        type: OP_TYPE_GET
+        address: "0.0.0.0:60002"
+        key: "bar"
+    }
+}

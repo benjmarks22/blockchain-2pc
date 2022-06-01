@@ -1,5 +1,6 @@
 #!/bin/bash
 set -eEuo pipefail
+
 # --- begin runfiles.bash initialization ---
 if [[ ! -d "${RUNFILES_DIR:-/dev/null}" && ! -f "${RUNFILES_MANIFEST_FILE:-/dev/null}" ]]; then
     if [[ -f "$0.runfiles_manifest" ]]; then
@@ -21,6 +22,25 @@ else
 fi
 # --- end runfiles.bash initialization ---
 
-setup_truffle="$(rlocation __main__/src/blockchain/setup_truffle.sh)"
-source $setup_truffle
-$truffle compile
+adapter_server_args=()
+cohort_server_args=()
+# Needs to be consistent between JS adapter server and cohort server.
+adapter_server_port=51560
+while [ $# -gt 0 ]
+do
+  case "$1" in
+    --adapter_server_port*) adapter_server_port=${1#*=};;
+    --) shift; break;;
+    *) adapter_server_args+=" $1";;
+  esac
+  shift
+done
+while [ $# -gt 0 ]
+do
+  cohort_server_args+=" $1"
+  shift
+done
+adapter_server_args+=" --adapter_server_port=$adapter_server_port"
+cohort_server_args+=" --blockchain_adapter_port=$adapter_server_port"
+$(rlocation __main__/src/blockchain/client/run_adapter_server_command.bash) $adapter_server_args
+$(rlocation __main__/src/cohort/cohort_server_main) $cohort_server_args &

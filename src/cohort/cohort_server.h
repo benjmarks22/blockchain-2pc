@@ -8,6 +8,7 @@
 #include "absl/container/flat_hash_set.h"
 #include "absl/status/statusor.h"
 #include "grpcpp/server_context.h"
+#include "src/blockchain/two_phase_commit.h"
 #include "src/db/database_transaction_adapter.h"
 #include "src/proto/cohort.grpc.pb.h"
 #include "thread_pool.hpp"
@@ -18,6 +19,8 @@ namespace internal {
 struct TransactionMetadata {
   GetTransactionResultResponse response;
   std::unique_ptr<db::DatabaseTransactionAdapter> db;
+  bool has_whole_db_read_lock;
+  bool has_whole_db_write_lock;
   std::vector<std::string> read_lock_keys;
   std::vector<std::string> write_lock_keys;
 };
@@ -27,10 +30,12 @@ class CohortServer : public Cohort::Service {
  public:
   CohortServer(uint num_db_threads, const std::string& db_txn_response_dir,
                std::function<std::unique_ptr<db::DatabaseTransactionAdapter>()>
-                   db_transaction_adapter_creator)
+                   db_transaction_adapter_creator,
+               std::unique_ptr<blockchain::TwoPhaseCommit> blockchain)
       : thread_pool_(num_db_threads),
         db_txn_response_dir_(db_txn_response_dir),
-        db_transaction_adapter_creator_(db_transaction_adapter_creator) {}
+        db_transaction_adapter_creator_(db_transaction_adapter_creator),
+        blockchain_(blockchain.release()) {}
 
   grpc::Status PrepareTransaction(
       grpc::ServerContext* context, const PrepareTransactionRequest* request,
@@ -43,11 +48,18 @@ class CohortServer : public Cohort::Service {
  private:
   absl::Mutex& GetLock(const std::string& key);
 
+  absl::Status AcquireWholeDbLock(const common::Transaction& transaction,
+                                  absl::Time presumed_abort_time,
+                                  internal::TransactionMetadata& txn_metadata);
+
   absl::Status AcquireDbLocks(const common::Transaction& transaction,
                               absl::Time presumed_abort_time,
                               internal::TransactionMetadata& txn_metadata);
 
   void ProcessTransaction(const PrepareTransactionRequest& request);
+
+  blockchain::VotingDecision WaitForBlockchainDecision(
+      const std::string& transaction_id, absl::Time presumed_abort_time);
 
   void AbortTransaction(const std::string& transaction_id, int cohort_index,
                         absl::optional<absl::Status> abort_status);
@@ -78,6 +90,9 @@ class CohortServer : public Cohort::Service {
 
   absl::Mutex locks_by_key_mutex_;
   absl::flat_hash_map<std::string, std::unique_ptr<absl::Mutex>> locks_by_key_;
+  // Used for DBs that don't support concurrent write transactions.
+  absl::Mutex whole_db_mutex_;
+  std::unique_ptr<blockchain::TwoPhaseCommit> blockchain_;
 };
 
 }  // namespace cohort

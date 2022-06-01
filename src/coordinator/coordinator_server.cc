@@ -6,6 +6,7 @@
 
 #include "absl/status/statusor.h"
 #include "absl/strings/str_cat.h"
+#include "glog/logging.h"
 #include "grpc/grpc.h"
 #include "grpcpp/create_channel.h"
 #include "grpcpp/security/credentials.h"
@@ -21,7 +22,6 @@ namespace coordinator {
 
 namespace {
 
-using Blockchain = ::blockchain::TwoPhaseCommit;
 using CohortStub = ::cohort::Cohort::StubInterface;
 using ::common::Namespace;
 using ::coordinator::internal::SubTransaction;
@@ -182,9 +182,7 @@ void CoordinatorServer::SendCohortPrepareRequests(
     if (cohort_index == sub_transactions.size() - 1) {
       metadata.possibly_sent_to_all_cohorts = true;
     }
-    // TODO(benjmarks22): Retry failed RPCs.
-    // For now the transactions with failed RPCs will abort at the blockchain
-    // at the presumed abort time.
+
     PrepareCohortTransaction(transaction_id, sub_transaction.namespace_,
                              prepare_request, context);
     ++cohort_index;
@@ -198,12 +196,12 @@ absl::Status CoordinatorServer::StartVoting(
   const time_t abort_time =
       absl::ToTimeT(absl::FromUnixSeconds(presumed_abort_time.seconds()) +
                     absl::Nanoseconds(presumed_abort_time.nanos()));
-  return Blockchain::StartVoting(transaction_id, abort_time, num_cohorts);
+  return blockchain_->StartVoting(transaction_id, abort_time, num_cohorts);
 }
 
-absl::StatusOr<Blockchain::VotingDecision> CoordinatorServer::GetVotingDecision(
+absl::StatusOr<blockchain::VotingDecision> CoordinatorServer::GetVotingDecision(
     const std::string &transaction_id) {
-  return Blockchain::GetVotingDecision(transaction_id);
+  return blockchain_->GetVotingDecision(transaction_id);
 }
 
 absl::Time CoordinatorServer::Now() { return absl::Now(); }
@@ -214,31 +212,11 @@ void CoordinatorServer::PrepareCohortTransaction(
     const grpc::ServerContext &context) {
   metadata_by_transaction_[transaction_id].contexts.push_back(
       ClientContext::FromServerContext(context));
+  cohort::PrepareTransactionResponse response;
   GetCohortStub(namespace_)
-      .AsyncPrepareTransaction(
+      .PrepareTransaction(
           metadata_by_transaction_[transaction_id].contexts.back().get(),
-          request,
-          /*cq = */ nullptr);
-}
-
-std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-    cohort::GetTransactionResultResponse>>
-CoordinatorServer::AsyncGetResultsFromCohort(
-    const Namespace &namespace_,
-    const cohort::GetTransactionResultRequest &request,
-    ClientContext &context) {
-  return GetCohortStub(namespace_)
-      .AsyncGetTransactionResult(&context, request,
-                                 /*cq=*/nullptr);
-}
-
-grpc::Status CoordinatorServer::FinishAsyncGetResultsFromCohort(
-    std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-        cohort::GetTransactionResultResponse>> &async_response,
-    cohort::GetTransactionResultResponse &response) {
-  grpc::Status status;
-  async_response->Finish(&response, &status, /*tag=*/nullptr);
-  return status;
+          request, &response);
 }
 
 grpc::Status CoordinatorServer::GetResultsFromCohort(
@@ -274,7 +252,9 @@ grpc::Status CoordinatorServer::UpdateResponseForSingleCohortTransaction(
   grpc::Status status = GetResultsFromCohort(
       namespace_, cohort_request, *transaction_result_context, cohort_response);
   if (!status.ok()) {
-    return status;
+    return grpc::Status(
+        status.error_code(),
+        absl::StrCat("Failed to get cohort results: ", status.error_message()));
   }
   if (cohort_response.has_aborted_response()) {
     *response.mutable_aborted_response()->add_namespaces() = namespace_;
@@ -288,6 +268,7 @@ grpc::Status CoordinatorServer::UpdateResponseForSingleCohortTransaction(
               cohort_response.committed_response().get_responses().end());
     response.mutable_committed_response()->set_complete(true);
   } else {
+    response.mutable_pending_response();
     return grpc::Status::OK;
   }
   CleanUpTransactionMetadata(transaction_id);
@@ -307,30 +288,20 @@ void CoordinatorServer::UpdateCommittedResponseFromCohorts(
       response_by_transaction_[transaction_id].response;
   cohort::GetTransactionResultRequest cohort_request;
   cohort_request.set_transaction_id(transaction_id);
-  std::vector<std::unique_ptr<ClientContext>> transaction_result_contexts;
-  absl::flat_hash_map<std::string,
-                      std::unique_ptr<grpc::ClientAsyncResponseReaderInterface<
-                          cohort::GetTransactionResultResponse>>>
-      async_responses_by_namespace;
   size_t num_committed_responses = 0;
   for (const auto &namespace_ :
        metadata_by_transaction_[transaction_id].cohort_namespaces) {
     if (metadata_by_transaction_[transaction_id]
             .cohorts_already_responded.contains(namespace_.address())) {
       ++num_committed_responses;
-    } else {
-      transaction_result_contexts.push_back(
-          ClientContext::FromServerContext(context));
-      async_responses_by_namespace[namespace_.address()] =
-          AsyncGetResultsFromCohort(namespace_, cohort_request,
-                                    *transaction_result_contexts.back());
+      continue;
     }
-  }
-  for (auto &namespace_and_response : async_responses_by_namespace) {
+    std::unique_ptr<ClientContext> cohort_context =
+        ClientContext::FromServerContext(context);
     cohort::GetTransactionResultResponse cohort_response;
-    grpc::Status status = FinishAsyncGetResultsFromCohort(
-        namespace_and_response.second, cohort_response);
-    if (status.ok() && cohort_response.has_committed_response()) {
+    grpc::Status cohort_status = GetResultsFromCohort(
+        namespace_, cohort_request, *cohort_context, cohort_response);
+    if (cohort_status.ok() && cohort_response.has_committed_response()) {
       ++num_committed_responses;
       response.mutable_committed_response()
           ->mutable_response()
@@ -338,7 +309,7 @@ void CoordinatorServer::UpdateCommittedResponseFromCohorts(
           ->Add(cohort_response.committed_response().get_responses().begin(),
                 cohort_response.committed_response().get_responses().end());
       metadata_by_transaction_[transaction_id]
-          .cohorts_already_responded.emplace(namespace_and_response.first);
+          .cohorts_already_responded.emplace(namespace_.address());
     }
   }
   if (num_committed_responses ==
@@ -379,7 +350,10 @@ grpc::Status CoordinatorServer::GetTransactionResult(
     }
     return status;
   }
-  if (metadata.decision == Blockchain::VotingDecision::PENDING) {
+  if (metadata.decision ==
+          blockchain::VotingDecision::VOTING_DECISION_PENDING ||
+      metadata.decision ==
+          blockchain::VotingDecision::VOTING_DECISION_UNKNOWN) {
     const auto decision_or_status =
         GetVotingDecision(request->global_transaction_id());
     if (!decision_or_status.ok()) {
@@ -389,16 +363,17 @@ grpc::Status CoordinatorServer::GetTransactionResult(
     metadata.decision = decision_or_status.value();
   }
   switch (metadata.decision) {
-    case Blockchain::VotingDecision::PENDING:
+    case blockchain::VotingDecision::VOTING_DECISION_UNKNOWN:
+    case blockchain::VotingDecision::VOTING_DECISION_PENDING:
       response->mutable_pending_response();
       break;
-    case Blockchain::VotingDecision::ABORT:
+    case blockchain::VotingDecision::VOTING_DECISION_ABORT:
       UpdateAbortedResponseFromCohorts(request->global_transaction_id(),
                                        *context);
       *response =
           response_by_transaction_[request->global_transaction_id()].response;
       break;
-    case Blockchain::VotingDecision::COMMIT:
+    case blockchain::VotingDecision::VOTING_DECISION_COMMIT:
       UpdateCommittedResponseFromCohorts(request->global_transaction_id(),
                                          *context);
       *response =
