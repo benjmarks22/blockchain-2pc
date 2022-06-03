@@ -8,105 +8,108 @@
 \usepackage{textcomp}
 \usepackage{xcolor}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
-    T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}
 
 \title{Two-Phase Commit Using Blockchain}
 
-\author{\IEEEauthorblockN{Benjamin Jacob Marks}
-\IEEEauthorblockA{\textit{Stanford University} \\
-benmarks@stanford.edu}
-\and
-\IEEEauthorblockN{Heron Yang}
-\IEEEauthorblockA{\textit{Stanford University} \\
-heronyang@stanford.edu}
-\and
-\IEEEauthorblockN{Yuewei Na}
-\IEEEauthorblockA{\textit{Stanford University} \\
-yueweina@stanford.edu}
+\author{\IEEEauthorblockN{Benjamin Marks}
+  \IEEEauthorblockA{\textit{Stanford University} \\
+  benmarks@stanford.edu}
+  \and
+  \IEEEauthorblockN{Heron Yang}
+  \IEEEauthorblockA{\textit{Stanford University} \\
+  heronyang@stanford.edu}
+  \and
+  \IEEEauthorblockN{Yuewei Na}
+  \IEEEauthorblockA{\textit{Stanford University} \\
+  yueweina@stanford.edu}
 }
 
 \maketitle
 
 \begin{abstract}
-We created a decentralized system that uses a public blockchain as a two-phase commit (2PC) coordinator, so users can securely commit an atomic transaction across any databases that support our interface. Users treat our system as one large database with ACID, despite being composed of many individual databases that are unaware of each other’s existence. By using a blockchain as a coordinator, it is resilient to failures such as network outages, power outages, and disk failures that cause traditional 2PC implementations to block. Our initial integration is with the Ethereum blockchain and LMDB databases; however, our system provides a generic interface to integrate with other blockchains and databases.
+  We created a decentralized system that uses a public blockchain as a two-phase commit (2PC) coordinator, so users can securely commit an atomic transaction across any databases that support our interface. Users treat our system as one large database with ACID, despite being composed of many individual databases that are unaware of each other’s existence. By using a blockchain as a coordinator, it is resilient to failures such as network outages, power outages, and disk failures that cause traditional 2PC implementations to block. Our initial integration is with the Ethereum blockchain and LMDB databases; however, our system provides a generic interface to integrate with other blockchains and databases.
 \end{abstract}
 
 \begin{IEEEkeywords}
-atomic commit, blockchain, smart contract, distributed system, database transaction
+  Atomic Commit, Blockchain, Smart Contract, Distributed System, Database Transaction.
 \end{IEEEkeywords}
 
 \section{Introduction}
-Two-Phase Commit (2PC) is a widely-adopted protocol that allows distributed systems to reach the consensus of distributed transactions. It ensures that the transaction can be either committed or aborted at all distributed machines. However, blocking is proven [3] to be to be inevitable even in
-synchronous systems where bounds on delays can be reliably estimated. 
+Two-Phase Commit (2PC) is a widely-adopted protocol that allows distributed systems to reach the consensus of distributed transactions. It ensures that the transaction can be either committed or aborted at all distributed machines. However, blocking is proven \cite{} to be to be inevitable even in synchronous systems where bounds on delays can be reliably estimated. 
 
-Since the invention of Bitcoin, the underlying technology, the blockchain, not only gained attraction from  cryptocurrency systems like Ethereum but also academic research about computer systems. At its core, blockchain is a protocol of reaching consensus by using Proof-of-Work or Proof-of-Stake [//TODO: reference goes here]. Previous work [1] has shown that synchronous blockchain can increase the reliability of the original 2PC protocol and also make it non-blocking when various kinds of failures happen.
+Since the invention of Bitcoin, the underlying blockchain technology has not only gained attraction from  cryptocurrency systems like Ethereum \cite{} but also academic research about computer systems. At its core, blockchain  is a protocol of reaching consensus by using Proof-of-Work. Previous work \cite{} has shown that a synchronous blockchain can increase the reliability of the original 2PC protocol and also make it non-blocking when various kinds of failures happen.
 
-In this paper, we further extended the previous work with an optimized system architecture and properly designed interfaces. These contributions make 2PC with blockchain work in production and at scale. Compared to the traditional version of 2PC protocol [2], our proposed approach increases extensibility, scalability and reliability.
-
+In this paper, we further extended the previous work with an optimized system architecture and properly designed interfaces. These contributions make 2PC with blockchain work in production and at scale. Compared to the traditional version of 2PC protocol \cite{}, our proposed approach increases extensibility, scalability and reliability.
 
 \subsubsection{Extensibility}
-We can plug any blockchain, regardless of whether it is public/permissionless or private/permissioned, into our blockchain interface which exposes \texttt{StartVoting()}, \texttt{Vote()}, \texttt{GetVotingDecision()}. We can also plug any database system that has ACID support into our transaction delegation interface, which implements common transaction operations - \texttt{Begin()}, \texttt{Commit()}, \texttt{Abort()}, \texttt{Get()}, \texttt{Put()}.
+We can plug any blockchain, regardless of whether it is public/permissionless or private/permissioned, into our blockchain interface which exposes \texttt{StartVoting()}, \texttt{Vote()}, \texttt{GetVotingDecision()}. We can also plug any database system that has ACID support into our transaction delegation interface which implements common transaction operations - \texttt{Begin()}, \texttt{Commit()}, \texttt{Abort()}, \texttt{Get()}, \texttt{Put()}.
 
 \subsubsection{Scalability}
-We design our coordinator  to be light-weight to handle high throughput and horizontally scalable. This is achieved by delegating coordination and voting work to the blockchain. The delegation makes the coordinator stateless and allows many coordinator jobs to co-exist to balance the load and tolerate job failures. Adding a cohort to the system is as simple as making potential clients aware of the address of the newly added cohort, so our system is horizontally scalable.
+We design our coordinator to be light-weight to handle high throughput and to be horizontally scalable. This is achieved by delegating coordination and voting work to the blockchain. The delegation makes the coordinator stateless and allows many coordinator jobs to co-exist to balance the load and tolerate job failures. Adding a cohort to the system is as simple as making potential clients aware of the address of the newly added cohort, so our system is horizontally scalable.
 
 \subsubsection{Reliability}
-Our system has better reliability than the traditional 2PC protocol for two reasons. First, the system leverages blockchain to maintain the coordination state. The stateless coordinator can easily recover as long as it knows the participating cohorts. Second, The coordinator is stateless and horizontally scalable. We can keep multiple jobs running concurrently and place a load-balancing layer on top of it. 
+Our system has better reliability than the traditional 2PC protocol for two reasons. First, the system leverages the blockchain to maintain the coordination state. The stateless coordinator can easily recover as long as it knows the participating cohorts. Second, The coordinator is stateless and horizontally scalable. We can keep multiple jobs running concurrently and place a load-balancing layer on top of it to be tolerant of individual coordinator node failures.
 
 \section{Design Overview}
 \subsection{Architecture and Components} \label{components}
-We define a transaction as a list of operations starting with \texttt{BEGIN} followed by multiple \texttt{GET} or \texttt{PUT} and ending with \texttt{COMMIT}. The client creates a transaction and requests the coordinator to commit. The coordinator distributes the transaction to the corresponding cohorts to prepare and then offloads the remaining 2PC responsibility to the blockchain. Each cohort prepares the transaction locally, votes to the blockchain if ready, checks on Blockchain to see if a transaction should be committed, then finally commits the transaction to its database.
 
-The architecture is similar to the traditional 2PC architecture where we have one coordinator and multiple cohorts - except each cohort talks to the blockchain directly to vote and to look up the voting decision as the coordinator offload the 2PC voting responsibility to the blockchain.
+We define a transaction as a list of operations starting with \texttt{Begin} followed by multiple \texttt{Get} or \texttt{Put} and ending with \texttt{Commit}. The client creates a transaction and requests the coordinator to commit. The coordinator distributes the transaction to the corresponding cohorts to prepare and then offloads the remaining 2PC responsibility to the blockchain. Each cohort prepares the transaction locally, votes to the blockchain if ready, checks on the blockchain to see if a transaction should be committed, and finally commits the transaction to its database.
 
-We describe details of each component and each in the remaining \ref{components}, the complete flow of handling a successful transaction in \ref{txnflow}, and how we handle failures in \ref{failurecases}.
-\begin{figure}[h]
-\centering
-\includegraphics[width=0.4\textwidth]{./diagram.png}
-\caption{Fig 1. This diagram displays the main components within the whole architecture and example steps of successfully committing a transaction.}
-\label{fig:Panel}
-\end{figure}
+The architecture is similar to the traditional 2PC architecture where we have one coordinator and multiple cohorts - except each cohort talks to the blockchain directly to vote and to look up the voting decision as the coordinator offloads the 2PC voting responsibility to the blockchain.
+
+We describe the details of each component in the remaining \ref{components}, the complete flow of handling a successful transaction in \ref{tnxflow}, and how we handle failures in \ref{failurecases}.
+
+% \begin{figure}[h]
+  % \centering
+  % \includegraphics[width=0.4\textwidth]{./diagram.png}
+% \caption{Fig 1. This diagram displays the main components within our architecture and example steps of successfully committing a transaction.}
+  % \label{fig:Panel}
+% \end{figure}
 
 \subsubsection{Blockchain} \label{blockchain}
+
+The blockchain component performs a 2PC protocol, so it’s responsible for tracking voting states of each transaction and making decisions of whether to commit or abort. The implementation uses Ethereum smart contracts to store the followings states of each transaction (indexed by the transaction ID) internally:
+
 The blockchain component performs a 2PC protocol, so it’s responsible for tracking voting states of each transaction and making decisions of committing. The implementation uses Ethereum smart contracts to store the followings states of each transaction (indexed by the transaction ID) internally:
-$transaction\_state$ stores voting states of each cohort of a transaction.
-$transaction\_config$ stores the transaction configure of each transaction including the number of cohorts and the vote timeout time.
 
-We designed a \texttt{\\BlockchainAdapter} interface, which exposes the following APIs externally to the coordinator and the cohort:
-\texttt{StartVoting(\\transaction\_id, cohorts, vote\_timeout\_time)} Called by the coordinator to start voting on a transaction. $cohorts$ is the number of cohorts that will vote on this transaction later. $vote\_timeout\_time$ is the absolute time on the blockchain when the 2PC stops taking votes.
-\texttt{Vote(transaction\_id, cohort\_id, ballot)} Called by the cohort to vote $COMMIT$ or $ABORT$ on a transaction before timeout.
-\texttt{GetVotingDecision(transaction\_id)} Called by any component to check the voting state on a transaction.
-
-\texttt{StartVoting} initializes the states for a transaction and \texttt{Vote} updates the voting status of a transaction. \texttt{GetVotingDecision} makes the decision by following the below logic:
-If any $ABORT$ vote is received, return an $ABORT$ decision.
-If all $COMMIT$ votes are received, return a $COMMIT$ decision.
-If not (1) and not (2), return an $ABORT$ decision if timed out; otherwise, return a $PENDING$ decision.
-
-\subsubsection{Database} \label{database}
-The database component is responsible for committing sub-transactions in each cohort and abstracts typical ACID databases with 5 APIs in a DatabaseAdapter:
 \begin{itemize}
-  \item \texttt{Begin()}:  starts a transaction
-  \item \texttt{Commit()}: commits a started transaction
-  \item \texttt{Abort()}: aborts a started transaction
-  \item \texttt{Put(key, value)}: puts value in a row whose primary key is key 
-  \item \texttt{Get(key)}: gets the value from the row whose primary key is key 
+  \item \texttt{transaction\_state} stores voting states of each cohort of a transaction.
+  \item \texttt{transaction\_config} stores the transaction configure of each transaction including the number of cohorts and the vote timeout time.
 \end{itemize}
 
+We designed a \texttt{BlockchainAdapter} interface, which exposes the following APIs externally to the coordinator and the cohort:
+\begin{itemize}
+  \item \texttt{StartVoting(transaction\_id, cohorts, vote\_timeout\_time)} Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later. \texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
+  \item \texttt{Vote(transaction\_id, cohort\_id, ballot)} Called by the cohort to vote \texttt{COMMIT} or \texttt{ABORT} on a transaction before timeout.
+  \item \texttt{GetVotingDecision(transaction\_id)} Called by any component to check the voting state of a transaction.
+\end{itemize}
 
+\texttt{StartVoting()} initializes the states for a transaction and \texttt{Vote()} updates the voting status of a transaction. \texttt{GetVotingDecision()} makes the decision by following the below logic:
+\begin{enumerate}
+  \item If any \texttt{ABORT} vote is received, return an \texttt{ABORT} decision.
+  \item If all \texttt{COMMIT} votes are received, return a \texttt{COMMIT} decision.
+  \item If not (1) and not (2), return an \texttt{ABORT} decision if the blockchain time has passed the vote timeout time; otherwise, return a \texttt{PENDING} decision.
+\end{enumerate}
 
+\subsubsection{Database} \label{database}
+The database component is responsible for committing sub-transactions in each cohort and abstracts typical ACID databases with 5 APIs in a \texttt{DatabaseAdapter:} 
+\begin{itemize}
+  \item \texttt{Begin()} starts a transaction.
+  \item \texttt{Commit()} commits a started transaction.
+  \item \texttt{Abort()} aborts a started transaction.
+  \item \texttt{Put(key, value)} puts value in a row whose primary key is key.
+  \item \texttt{Get(key)} gets the value from the row whose primary key is key.
+\end{itemize}
 
-
-
-We require the underlying database to be ACID because the database can handle locks and transactions natively without requiring cohorts to implement complicated locking logic for Put and Get operations. However, for databases that only support weak snapshot isolation (e.g. LMDB [4]), the cohort needs a single write lock to prevent other write transactions to be started to make sure that transactions are serialized. 
+We require the underlying database to be ACID because the database can handle locks and transactions natively without requiring cohorts to implement complicated locking logic for \texttt{Put} and \texttt{Get} operations. However, for databases that only support weak snapshot isolation (e.g. LMDB \cite{}), the cohort needs a single write lock to prevent other write transactions to be started to make sure that transactions are serialized. 
 
 \subsubsection{Coordinator} \label{coordinator}
 The coordinator exposes two APIs to the clients:
 \begin{itemize}
-  \item \texttt{CommitAtomicTransaction(
-    CommitAtomicTransactionRequest, CommitAtomicTransactionResponse)}
-  \item \texttt{GetTransactionResult(
-    GetTransactionResultRequest, GetTransactionResultResponse)}
+  \item \texttt{CommitAtomicTransaction(CommitAtomicTransactionRequest, CommitAtomicTransactionResponse)}
+  \item \texttt{GetTransactionResult(GetTransactionResultRequest, GetTransactionResultResponse)}
 \end{itemize}   
 
 The data key space is split into $namespaces$, each of which corresponds to the single cohort responsible for all keys in that range.  When the coordinator receives a \texttt{\\CommitAtomicTransaction} call from the client, it first sends \texttt{StartVoting} to the blockchain to trace the voting status from the cohorts. Then it decomposes the transaction into sub-transactions, which will be executed in the cohorts, based on the $namespace$ of each operation. After transaction decomposition, the coordinator sends \texttt{PrepareTransaction} requests with the sub-transactions to the cohorts. Different from the traditional 2PC protocol, we design our coordinator to delegate voting and coordination work to the blockchain. From here on, the coordinator no longer handles any work unless \texttt{GetTransactionResult} is requested from the client.
@@ -115,8 +118,13 @@ When the client sends \texttt{GetTransactionResult} to the coordinator, the coor
 
 As described in the handling failures section, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information is also known by the client.
 
-\subsubsection{Cohort} \label{cohort}
+The data key space is split into \texttt{namespaces}, each of which corresponds to the single cohort responsible for all keys in that range. When the coordinator receives a \texttt{CommitAtomicTransaction()} call from the client, it first sends \texttt{StartVoting()} to the blockchain to track the voting status from the cohorts. Then it decomposes the transaction into sub-transactions, which will be executed in the cohorts, based on the namespace of each operation. After transaction decomposition, the coordinator sends \texttt{PrepareTransaction()} requests with the sub-transactions to the cohorts. Different from the traditional 2PC protocol, we design our coordinator to delegate voting and coordination work to the blockchain. From here on, the coordinator no longer handles any work unless \texttt{GetTransactionResult()} is requested from the client.
 
+When the client sends \texttt{GetTransactionResult()} to the coordinator, the coordinator reads the transaction status from the blockchain. If the blockchain returns a \texttt{PENDING} or \texttt{ABORTED} status, the coordinator will return the status directly. If the transaction is \texttt{COMMITTED}, the coordinator will send requests to the cohorts to fetch the \texttt{Get} results and then return the status with the \texttt{Get} results. If not all cohorts return the \texttt{Get} results (e.g. due to crashes or network latency), the coordinator will send a partial response to the client with the ones that responded along with an indicator that the response is not yet complete.
+
+As described in \ref{}, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information (e.g. list of cohorts involved in the transaction) is also known by the client.
+
+\subsubsection{Cohort} \label{cohort}
 The cohort exposes two APIs to the coordinator:
 \begin{itemize}
   \item \texttt{PrepareTransaction(
@@ -130,18 +138,18 @@ The $PrepareTransactionRequest$ contains a $transaction\_id$, a list of operatio
   \item Start a new thread in the thread pool.
   \item Create a \texttt{DatabaseAdapter} object.
   \item Start a transaction with 
-  \texttt{DatabaseAdapter\\::Begin()}. 
+    \texttt{DatabaseAdapter\\::Begin()}. 
   \item Acquire the relevant locks for the sub-transaction. 
   \item Execute a series of requested Put or Get operations in the sub-transaction. 
-If any operation is reported invalid by the database or locks cannot be acquired in time, the cohort will send an $ABORT$ ballot to the blockchain via \texttt{BlockchainAdapter::Vote()}.
+    If any operation is reported invalid by the database or locks cannot be acquired in time, the cohort will send an $ABORT$ ballot to the blockchain via \texttt{BlockchainAdapter::Vote()}.
   \item If all operations succeed, it will store the retrieved Get values in an in-memory hashmap as well as persistently on disk keyed by the $transaction\_id$ to prepare for future \texttt{GetTransactionResult} calls.
   \item Set a timer based on the vote timeout time.
   \item If the timer reaches the vote timeout time, it will send a request \texttt{BlockchainAdapter::\\GetVotingDecision(transaction\_id)} to the blockchain. 
-  \begin{enumerate}
-    \item If the blockchain states that the transaction should be committed, it will call \texttt{DatabaseAdapter::Commit()}.
-    \item If the blockchain states that the transaction should be aborted, it will call \texttt{DatabaseAdapter::Abort()}.
-  \end{enumerate}
-  
+    \begin{enumerate}
+      \item If the blockchain states that the transaction should be committed, it will call \texttt{DatabaseAdapter::Commit()}.
+      \item If the blockchain states that the transaction should be aborted, it will call \texttt{DatabaseAdapter::Abort()}.
+    \end{enumerate}
+
 \end{enumerate}
 
 
@@ -152,15 +160,15 @@ When the cohort receives a \texttt{GetTransaction\-Result} request and has commi
 This section describes the end-to-end life of a transaction without handling failures.
 
 \begin{enumerate}
-\item The client composes a transaction request and passes it to the coordinator through \texttt{\\CommitAomticTransaction}. The coordinator returns a transaction ID for the client to look up the transaction result later.
-\item The coordinator asks the blockchain to trace votes for the new transaction through \texttt{StartVoting}.
-\item The coordinator decomposes the transaction into sub-transactions and distributes them to the corresponding cohort through \texttt{PrepareTransaction}.
-\item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before Commit(). The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{GET} operation results to disk for faster responses after a crash and recovery.
-\item The cohort votes to the blockchain through \texttt{Vote} indicating that it wants to commit or abort the transaction.
-\item The cohort waits until the expected transaction timeout time and gets the voting decision from the blockchain through \texttt{GetVotingDecision}.
-\item If the voting decision is to commit the transaction, cohort commits the sub-transaction onto the database and releases any acquired locks; otherwise, it aborts the sub-transaction in the database and releases any acquired locks.
-\item (Independent of the previous steps) The client waits until the timeout time and requests the transaction result from the coordinator through \texttt{GetTransactionResult}, using the transaction ID given in step 1.
-\item The coordinator gets (1) the voting decision of the inquiry transaction from the blockchain through \texttt{GetTransactionResult} and (2) the GET operation results from each cohort.
+  \item The client composes a transaction request and passes it to the coordinator through \texttt{\\CommitAomticTransaction}. The coordinator returns a transaction ID for the client to look up the transaction result later.
+  \item The coordinator asks the blockchain to trace votes for the new transaction through \texttt{StartVoting}.
+  \item The coordinator decomposes the transaction into sub-transactions and distributes them to the corresponding cohort through \texttt{PrepareTransaction}.
+  \item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before Commit(). The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{GET} operation results to disk for faster responses after a crash and recovery.
+  \item The cohort votes to the blockchain through \texttt{Vote} indicating that it wants to commit or abort the transaction.
+  \item The cohort waits until the expected transaction timeout time and gets the voting decision from the blockchain through \texttt{GetVotingDecision}.
+  \item If the voting decision is to commit the transaction, cohort commits the sub-transaction onto the database and releases any acquired locks; otherwise, it aborts the sub-transaction in the database and releases any acquired locks.
+  \item (Independent of the previous steps) The client waits until the timeout time and requests the transaction result from the coordinator through \texttt{GetTransactionResult}, using the transaction ID given in step 1.
+  \item The coordinator gets (1) the voting decision of the inquiry transaction from the blockchain through \texttt{GetTransactionResult} and (2) the GET operation results from each cohort.
 \end{enumerate}
 
 \subsection{Handling Failures} \label{failurecases}
@@ -212,20 +220,20 @@ Currently the coordinator is stateless, so it is easy to add new coordinator ser
 
 \section{Appendix} \label{appendix}
 \begin{table}[hbtp]
-     	\centering
-     	\caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
-     	\label{table:cost}
-     	\begin{tabular}{|l|c|c|c|}
-     		\hline
-     		  & Gas Used (Gwei) &  Cost in ETH & Cost in USD \\
-     		\hline
-     		StartVoting &73441 &0.000073441 & 0.143\\
-     		\hline
-     		Vote 1 &56451	&0.000056451 &0.110\\
-     		\hline
-     		Vote 2 &39513 &0.000039513 &0.077\\
-     		\hline
-     	\end{tabular}
-     \end{table}
+  \centering
+  \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
+  \label{table:cost}
+  \begin{tabular}{|l|c|c|c|}
+    \hline
+          & Gas Used (Gwei) &  Cost in ETH & Cost in USD \\
+          \hline
+    StartVoting &73441 &0.000073441 & 0.143\\
+    \hline
+    Vote 1 &56451	&0.000056451 &0.110\\
+    \hline
+    Vote 2 &39513 &0.000039513 &0.077\\
+    \hline
+  \end{tabular}
+\end{table}
 \end{document}
 \endinput
