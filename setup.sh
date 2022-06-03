@@ -25,7 +25,7 @@ function install () {
 
 BINARY_DIR="/usr/local/bin"
 $SUDO apt-get update || exit 2
-$SUDO apt-get install -y clang-format clang-tidy curl git gcc g++ python3 python3-pip npm || exit 3
+$SUDO apt-get install -y clang-format clang-tidy curl git gcc g++ python3 python3-pip npm texlive texlive-generic-extra texlive-plain-generic texlive-science || exit 3
 install ${BINARY_DIR} bazel "https://github.com/bazelbuild/bazelisk/releases/download/v1.11.0/bazelisk-linux-amd64"
 install ${BINARY_DIR} buildifier "https://github.com/bazelbuild/buildtools/releases/download/5.1.0/buildifier-linux-amd64"
 $SUDO npm install -g prettier
