@@ -118,8 +118,8 @@ The blockchain component performs a 2PC protocol, so it’s responsible for trac
 
 We designed a \texttt{BlockchainAdapter} interface, which exposes the following APIs externally to the coordinator and the cohort:
 \begin{itemize}
-  \item \texttt{StartVoting(transaction\_id, cohorts, vote\_timeout\_time)}\\Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later.\\\texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
-  \item \texttt{Vote(transaction\_id, cohort\_id, ballot)}\\Called by the cohort to vote \texttt{COMMIT} or \texttt{ABORT} on a transaction before timeout.
+  \item \texttt{StartVoting(transaction\_id, cohorts,\\ vote\_timeout\_time)}\\Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later.\\\texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
+  \item \texttt{Vote(transaction\_id, cohort\_id,\\ballot)}\\Called by the cohort to vote \texttt{COMMIT} or \texttt{ABORT} on a transaction before timeout.
   \item \texttt{GetVotingDecision(transaction\_id)}\\Called by any component to check the voting state of a transaction.
 \end{itemize}
 
@@ -167,7 +167,7 @@ The \texttt{PrepareTransactionRequest()} contains a \texttt{transaction\_id}, a 
   \item Start a new thread in the thread pool.
   \item Create a \texttt{DatabaseAdapter} object.
   \item Start a transaction with \texttt{DatabaseAdapter:: Begin()}.
-  \item Acquire the relevant locks for the sub-transaction.
+  \item Acquire the relevant locks for the sub-transa-ction.
   \item Execute a series of requested \texttt{Put} or \texttt{Get} operations in the sub-transaction. 
   \item If any operation is reported invalid by the database or locks cannot be acquired in time, the cohort will send an \texttt{ABORT} ballot to the blockchain via \texttt{BlockchainAdapter::Vote()}.
   \item If all operations succeed, it will store the retrieved \texttt{Get} values in an in-memory hashmap as well as persistently on disk keyed by the \texttt{transaction\_id} to prepare for future \texttt{GetTransactionResult()} calls.
@@ -187,7 +187,7 @@ This section describes the end-to-end life of a transaction without handling fai
 
 \begin{enumerate}
   \item The client composes a transaction request and passes it to the coordinator through \texttt{CommitAomticTransaction()}. The coordinator returns a transaction ID for the client to look up the transaction result later.
-  \item The coordinator asks the blockchain to trace votes for the new transaction through \texttt{StartVoting()}.
+  \item The coordinator asks the blockchain to trace votes for the new transaction through \texttt{Start-Voting()}.
   \item The coordinator decomposes the transaction into sub-transactions and distributes them to the corresponding cohort through \texttt{PrepareTransaction()}.
   \item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before Commit(). The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{Get} operation results to disk for faster responses after a crash and recovery.
   \item The cohort votes to the blockchain through \texttt{Vote()} indicating that it wants to commit or abort the transaction.
@@ -217,12 +217,12 @@ In this section we first describe the implementation of our overall system. Then
 We implemented the coordinator and the cohorts with about 2800 lines of C++ code. For communications between components, we used gRPC \cite{github_grpc} and ProtoBuf \cite{github_proto}. For providing the extensibility of swapping different database and blockchain implementations, we provided generic interfaces. We tested end-to-end behaviors on a single machine with different processes simulating each component.
 
 \subsubsection{Blockchain}
-We wrote our two-phase-commit smart contract with Solidity and developed it with Truffle \cite{github_truffle}. Truffle provided the development environment for us to compile smart contracts, test it, and deploy it locally for debugging. Once we deployed our smart contract, the coordinator and the cohorts interacted with the contract through a smart contract client library. However, we didn’t find a proper C++ smart contract client library to use, so we used a JavaScript library (web3.js \cite{github_web3}) instead and added an additional gRPC layer to translate to C++.
+We wrote our two-phase-\\commit smart contract with Solidity and developed it with Truffle \cite{github_truffle}. Truffle provided the development environment for us to compile smart contracts, test it, and deploy it locally for debugging. Once we deployed our smart contract, the coordinator and the cohorts interacted with the contract through a smart contract client library. However, we didn’t find a proper C++ smart contract client library to use, so we used a JavaScript library (web3.js \cite{github_web3}) instead and added an additional gRPC layer to translate to C++.
 
 While testing in the Truffle development, we learned the gas used for successfully committing a transaction with two cohorts is around 0.33 USD \cite{gwei} (see Appendix \ref{appendix:blockchaingas} for breakdowns).
 
 \subsubsection{Database}
-We designed the \texttt{DatabaseAdapter} interface and implemented the methods with LMDB primitives. LMDB provides process-oriented functions like \texttt{open()}, \texttt{begin()}, \texttt{commit()}, \texttt{put()}, \texttt{get()}. Our object-oriented C++ implementation has almost 500 lines of code. We chose LMDB because it is fast, lightweight and easy to test in memory. The interface is extensible to other databases like SQLite \cite{bhosale2015sqlite}.
+We designed the \texttt{DatabaseAda-pter} interface and implemented the methods with LMDB primitives. LMDB provides process-oriented functions like \texttt{open()}, \texttt{begin()}, \texttt{commit()}, \texttt{put()}, \texttt{get()}. Our object-oriented C++ implementation has almost 500 lines of code. We chose LMDB because it is fast, lightweight and easy to test in memory. The interface is extensible to other databases like SQLite \cite{bhosale2015sqlite}.
 
 \subsubsection{Coordinator}
 The coordinator deterministically computes a global identifier for the transaction based on the client’s provided identifier and the client’s hostname and port. This allows the coordinator to avoid sending duplicate (potentially non-idempotent) requests to cohorts if the client sends the same request multiple times. This can happen if the client does not hear the response for its original request from the coordinator in time and tries to resend it. By using SHA256 to generate the transaction identifiers, it is extremely unlikely for transactions from different clients or with different client identifiers to have the same global identifier.
