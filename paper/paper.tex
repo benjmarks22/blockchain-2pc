@@ -133,7 +133,7 @@ The \texttt{PrepareTransactionRequest()} contains a \texttt{transaction\_id}, a 
   \item Acquire the relevant locks for the sub-transaction.
   \item Execute a series of requested \texttt{Put} or \texttt{Get} operations in the sub-transaction. 
   \item If any operation is reported invalid by the database or locks cannot be acquired in time, the cohort will send an \texttt{ABORT} ballot to the blockchain via \texttt{BlockchainAdapter::Vote()}.
-  \item If all operations succeed, it will store the retrieved Get values in an in-memory hashmap as well as persistently on disk keyed by the \texttt{transaction\_id} to prepare for future \texttt{GetTransactionResult()} calls.
+  \item If all operations succeed, it will store the retrieved \texttt{Get} values in an in-memory hashmap as well as persistently on disk keyed by the \texttt{transaction\_id} to prepare for future \texttt{GetTransactionResult()} calls.
   \item Set a timer based on the input vote timeout time.
   \item If the timer reaches the vote timeout time, it will send a request \texttt{BlockchainAdapter::\\GetVotingDecision(transaction\_id)} to the blockchain. 
     \begin{enumerate}
@@ -152,12 +152,12 @@ This section describes the end-to-end life of a transaction without handling fai
   \item The client composes a transaction request and passes it to the coordinator through \texttt{CommitAomticTransaction()}. The coordinator returns a transaction ID for the client to look up the transaction result later.
   \item The coordinator asks the blockchain to trace votes for the new transaction through \texttt{StartVoting()}.
   \item The coordinator decomposes the transaction into sub-transactions and distributes them to the corresponding cohort through \texttt{PrepareTransaction()}.
-  \item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before Commit(). The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{GET} operation results to disk for faster responses after a crash and recovery.
+  \item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before Commit(). The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{Get} operation results to disk for faster responses after a crash and recovery.
   \item The cohort votes to the blockchain through \texttt{Vote()} indicating that it wants to commit or abort the transaction.
   \item The cohort waits until the expected transaction vote timeout time and gets the voting decision from the blockchain through \texttt{GetVotingDecision()}.
   \item If the voting decision is to commit the transaction, the cohort commits the sub-transaction onto the database and releases any acquired locks; otherwise, it aborts the sub-transaction in the database and releases any acquired locks.
   \item (Independent of the previous steps) The client waits until the vote timeout time and requests the transaction result from the coordinator through \texttt{GetTransactionResult()}, using the transaction ID given in step 1.
-  \item The coordinator gets (1) the voting decision of the inquiry transaction from the blockchain through \texttt{GetTransactionResult()} and (2) the \texttt{GET} operation results from each cohort.
+  \item The coordinator gets (1) the voting decision of the inquiry transaction from the blockchain through \texttt{GetTransactionResult()} and (2) the \texttt{Get} operation results from each cohort.
 \end{enumerate}
 
 \subsection{Handling Failures} \label{failurecases}
@@ -201,7 +201,7 @@ Our approach enables the client to tradeoff between latency and the likelihood o
 As part of a future effort, we can extend the system to tradeoff between further latency reductions and safety by having cohorts send their votes to the coordinator and to the blockchain. If the coordinator receives commit votes from all cohorts, it can update the decision in the blockchain and tell all cohorts to commit. In this procedure, we would not need to wait for a new block to be mined in the blockchain to commit a transaction. The loss of safety comes from edge cases where the blockchain is slow to process the transaction and it ends up not receiving the votes in time and thus deciding to abort. If some cohorts received commit messages from the coordinator and others did not and then asked the blockchain for the decision, the cohorts who received commit messages would commit, while the others would abort the transaction. As we expect this to only affect a very small number of transactions, clients would be able to indicate if their transaction can tolerate a small chance of non-atomicity for much faster latency.
 
 \subsubsection{Distributed coordinator}
-Currently the coordinator is stateless, so it is easy to add new coordinator servers, as long as each one handles a disjoint set of transactions. However, if a coordinator crashes, then clients cannot ask other coordinators for the Get responses of a transaction, since those coordinators will not know how to find the cohorts for the transaction. As part of a future effort, we could have the coordinators send each other the cohorts for each transaction so they can respond to client requests even if the original coordinator for that request crashes.
+Currently the coordinator is stateless, so it is easy to add new coordinator servers, as long as each one handles a disjoint set of transactions. However, if a coordinator crashes, then clients cannot ask other coordinators for the \texttt{Get} responses of a transaction, since those coordinators will not know how to find the cohorts for the transaction. As part of a future effort, we could have the coordinators send each other the cohorts for each transaction so they can respond to client requests even if the original coordinator for that request crashes.
 
 \bibliographystyle{plain}
 \bibliography{references}
