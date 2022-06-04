@@ -203,11 +203,11 @@ As part of a future effort, we can extend the system to tradeoff between further
 \subsubsection{Distributed coordinator}
 Currently the coordinator is stateless, so it is easy to add new coordinator servers, as long as each one handles a disjoint set of transactions. However, if a coordinator crashes, then clients cannot ask other coordinators for the Get responses of a transaction, since those coordinators will not know how to find the cohorts for the transaction. As part of a future effort, we could have the coordinators send each other the cohorts for each transaction so they can respond to client requests even if the original coordinator for that request crashes.
 
-\section{Reference}
 \bibliographystyle{plain}
 \bibliography{references}
 
-\section{Appendix} \label{appendix}
+\appendix
+\label{appendix}
 \begin{table}[hbtp]
   \centering
   \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
