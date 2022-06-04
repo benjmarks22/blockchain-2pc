@@ -145,8 +145,8 @@ We require the underlying database to be ACID because the database can handle lo
 \subsubsection{Coordinator} \label{coordinator}
 The coordinator exposes two APIs to the clients:
 \begin{itemize}
-  \item \texttt{CommitAtomicTransaction( CommitAtomicTransactionRequest, CommitAtomicTransactionResponse)}
-  \item \texttt{GetTransactionResult( GetTransactionResultRequest, GetTransactionResultResponse)}
+  \item \texttt{CommitAtomicTransaction(\\CommitAtomicTransactionRequest,\\CommitAtomicTransactionResponse)}
+  \item \texttt{GetTransactionResult(\\GetTransactionResultRequest,\\GetTransactionResultResponse)}
 \end{itemize}   
 
 The data key space is split into \texttt{namespaces}, each of which corresponds to the single cohort responsible for all keys in that range. When the coordinator receives a \texttt{CommitAtomicTransaction()} call from the client, it first sends \texttt{StartVoting()} to the blockchain to track the voting status from the cohorts. Then it decomposes the transaction into sub-transactions, which will be executed in the cohorts, based on the namespace of each operation. After transaction decomposition, the coordinator sends \texttt{PrepareTransaction()} requests with the sub-transactions to the cohorts. Different from the traditional 2PC protocol, we design our coordinator to delegate voting and coordination work to the blockchain. From here on, the coordinator no longer handles any work unless \texttt{GetTransactionResult()} is requested from the client.
@@ -175,7 +175,7 @@ The \texttt{PrepareTransactionRequest()} contains a \texttt{transaction\_id}, a 
   \item If the timer reaches the vote timeout time, it will send a request \texttt{BlockchainAdapter::\\GetVotingDecision(transaction\_id)} to the blockchain. 
     \begin{enumerate}
       \item If the blockchain states that the transaction should be committed, it will call \texttt{DatabaseAdapter::Commit()} and release any acquired locks.
-  \item If the blockchain states that the transaction should be aborted, it will call \texttt{DatabaseAdapter::Abort()} and release any acquired locks.
+  \item If the blockchain states that the transaction should be aborted, it will call \\ \texttt{DatabaseAdapter::Abort()} and release any acquired locks.
   \end{enumerate}
 \end{enumerate}
 
