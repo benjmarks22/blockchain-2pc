@@ -1,7 +1,4 @@
 \documentclass[11pt,sigplan,screen,nonacm]{acmart}
-% \documentclass[11pt,conference]{IEEEtran}
-% \IEEEoverridecommandlockouts
-% \usepackage[sort,nocompress]{cite}
 \usepackage{natbib}
 \setcitestyle{square, comma, numbers,sort&compress, super}
 \usepackage{amsmath,amssymb,amsfonts}
@@ -51,28 +48,18 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 }
 \email{yueweina@stanford.edu}
 
-% \author{\IEEEauthorblockN{Benjamin Marks}
-  % \IEEEauthorblockA{\textit{Stanford University} \\
-  % benmarks@stanford.edu}
-  % \and
-  % \IEEEauthorblockN{Heron Yang}
-  % \IEEEauthorblockA{\textit{Stanford University} \\
-  % heronyang@stanford.edu}
-  % \and
-  % \IEEEauthorblockN{Yuewei Na}
-  % \IEEEauthorblockA{\textit{Stanford University} \\
-  % yueweina@stanford.edu}
-% }
-
 \begin{abstract}
   We created a decentralized system that uses a public blockchain as a two-phase commit (2PC) coordinator, so users can securely commit an atomic transaction across any databases that support our interface. Users treat our system as one large database with ACID, despite being composed of many individual databases that are unaware of each other’s existence. By using a blockchain as a coordinator, it is resilient to failures such as network outages, power outages, and disk failures that cause traditional 2PC implementations to block. Our initial integration is with the Ethereum blockchain and LMDB databases; however, our system provides a generic interface to integrate with other blockchains and databases.
 \end{abstract}
 
+\settopmatter{printfolios=true} % add page number
+
+% hacky way to get some space below the author row.
+\begin{teaserfigure}
+\end{teaserfigure}
+
 \maketitle
 
-% \begin{IEEEkeywords}
-  % Atomic Commit, Blockchain, Smart Contract, Distributed System, Database Transaction.
-% \end{IEEEkeywords}
 \keywords{atomic commit, blockchain, smart contract, distributed system, database transaction}
 
 \section{Introduction}
@@ -243,27 +230,6 @@ Currently the coordinator is stateless, so it is easy to add new coordinator ser
 \bibliographystyle{unsrt}
 \bibliography{references}
 
-% \appendix
-% \begin{table}[hbtp]
-  % \centering
-  % \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
-  % \label{table:cost}
-  % \begin{tabular}{|p{1.8cm}|p{1.8cm}|p{2cm}|p{1.8cm}|}
-    % \hline
-          % & Gas Used (Gwei) &  Cost in ETH & Cost in USD \\
-          % \hline
-    % StartVoting &73441 &0.000073441 & 0.143\\
-    % \hline
-    % Vote 1 &56451	&0.000056451 &0.110\\
-    % \hline
-    % Vote 2 &39513 &0.000039513 &0.077\\
-    % \hline
-    % Total &169405 &0.000169405 &0.330\\
-    % \hline
-  % \end{tabular}
-% \label{blockchaingas}
-% \end{table}
-
 \begin{appendices}
 
   \section{Blockchain Gas Used}
@@ -273,7 +239,7 @@ Currently the coordinator is stateless, so it is easy to add new coordinator ser
     \centering
     \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
     \label{table:cost}
-    \begin{tabular}{|p{1.8cm}|p{1.8cm}|p{2cm}|p{1.8cm}|}
+    \begin{tabular}{|p{1.8cm}|p{1.8cm}|p{2cm}|p{1.5cm}|}
       \hline
           & Gas Used (Gwei) &  Cost in ETH & Cost in USD \\
           \hline
