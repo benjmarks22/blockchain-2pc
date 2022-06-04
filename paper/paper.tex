@@ -103,7 +103,7 @@ The database component is responsible for committing sub-transactions in each co
   \item \texttt{Get(key)} gets the value from the row whose primary key is key.
 \end{itemize}
 
-We require the underlying database to be ACID because the database can handle locks and transactions natively without requiring cohorts to implement complicated locking logic for \texttt{Put} and \texttt{Get} operations. However, for databases that only support weak snapshot isolation (e.g. LMDB \cite{chu2020lightning}), the cohort needs a single write lock to prevent other write transactions to be started to make sure that transactions are serialized. 
+We require the underlying database to be ACID because the database can handle locks and transactions natively without requiring cohorts to implement complicated locking logic for \texttt{Put} and \texttt{Get} operations. However, for databases that only support weak snapshot isolation (e.g. LMDB \cite{henry2019howard}), the cohort needs a single write lock to prevent other write transactions to be started to make sure that transactions are serialized. 
 
 \subsubsection{Coordinator} \label{coordinator}
 The coordinator exposes two APIs to the clients:
@@ -182,7 +182,7 @@ We implemented the coordinator and the cohorts with about 2800 lines of C++ code
 \subsubsection{Blockchain}
 We wrote our two-phase-commit smart contract with Solidity and developed it with Truffle \cite{}. Truffle provided the development environment for us to compile smart contracts, test it, and deploy it locally for debugging. Once we deployed our smart contract, the coordinator and the cohorts interacted with the contract through a smart contract client library. However, we didn’t find a proper C++ smart contract client library to use, so we used a JavaScript library (web.js[ref]) instead and added an additional gRPC layer to translate to C++.
 
-While testing in the Truffle development, we learned the gas used for successfully committing a transaction with two cohorts is around 0.33 USD \cite{} (see \ref{appendix} for breakdowns).
+While testing in the Truffle development, we learned the gas used for successfully committing a transaction with two cohorts is around 0.33 USD \cite{gwei} (see \ref{appendix} for breakdowns).
 
 \subsubsection{Database}
 We designed the \texttt{DatabaseAdapter} interface and implemented the methods with LMDB primitives. LMDB provides process-oriented functions like \texttt{open()}, \texttt{begin()}, \texttt{commit()}, \texttt{put()}, \texttt{get()}. Our object-oriented C++ implementation has almost 500 lines of code. We chose LMDB because it is fast, lightweight and easy to test in memory. The interface is extensible to other databases like SQLite \cite{bhosale2015sqlite}.
