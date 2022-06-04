@@ -39,7 +39,7 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \end{IEEEkeywords}
 
 \section{Introduction}
-Two-Phase Commit (2PC) is a widely-adopted protocol that allows distributed systems to reach the consensus of distributed transactions. It ensures that the transaction can be either committed or aborted at all distributed machines. However, blocking is proven \cite{} to be to be inevitable even in synchronous systems where bounds on delays can be reliably estimated. 
+Two-Phase Commit (2PC) is a widely-adopted protocol that allows distributed systems to reach the consensus of distributed transactions. It ensures that the transaction can be either committed or aborted at all distributed machines. However, blocking is proven \cite{ezhilchelvan2020non} to be to be inevitable even in synchronous systems where bounds on delays can be reliably estimated. 
 
 Since the invention of Bitcoin, the underlying blockchain technology has not only gained attraction from  cryptocurrency systems like Ethereum \cite{} but also academic research about computer systems. At its core, blockchain  is a protocol of reaching consensus by using Proof-of-Work. Previous work \cite{} has shown that a synchronous blockchain can increase the reliability of the original 2PC protocol and also make it non-blocking when various kinds of failures happen.
 
@@ -74,8 +74,6 @@ We describe the details of each component in the remaining \ref{components}, the
 
 The blockchain component performs a 2PC protocol, so it’s responsible for tracking voting states of each transaction and making decisions of whether to commit or abort. The implementation uses Ethereum smart contracts to store the followings states of each transaction (indexed by the transaction ID) internally:
 
-The blockchain component performs a 2PC protocol, so it’s responsible for tracking voting states of each transaction and making decisions of committing. The implementation uses Ethereum smart contracts to store the followings states of each transaction (indexed by the transaction ID) internally:
-
 \begin{itemize}
   \item \texttt{transaction\_state} stores voting states of each cohort of a transaction.
   \item \texttt{transaction\_config} stores the transaction configure of each transaction including the number of cohorts and the vote timeout time.
@@ -83,9 +81,9 @@ The blockchain component performs a 2PC protocol, so it’s responsible for trac
 
 We designed a \texttt{BlockchainAdapter} interface, which exposes the following APIs externally to the coordinator and the cohort:
 \begin{itemize}
-  \item \texttt{StartVoting(transaction\_id, cohorts, vote\_timeout\_time)} Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later. \texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
-  \item \texttt{Vote(transaction\_id, cohort\_id, ballot)} Called by the cohort to vote \texttt{COMMIT} or \texttt{ABORT} on a transaction before timeout.
-  \item \texttt{GetVotingDecision(transaction\_id)} Called by any component to check the voting state of a transaction.
+  \item \texttt{StartVoting(transaction\_id, cohorts, vote\_timeout\_time)}\\Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later. \texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
+  \item \texttt{Vote(transaction\_id, cohort\_id, ballot)}\\Called by the cohort to vote \texttt{COMMIT} or \texttt{ABORT} on a transaction before timeout.
+  \item \texttt{GetVotingDecision(transaction\_id)}\\Called by any component to check the voting state of a transaction.
 \end{itemize}
 
 \texttt{StartVoting()} initializes the states for a transaction and \texttt{Vote()} updates the voting status of a transaction. \texttt{GetVotingDecision()} makes the decision by following the below logic:
@@ -114,17 +112,13 @@ The coordinator exposes two APIs to the clients:
   \item \texttt{GetTransactionResult( GetTransactionResultRequest, GetTransactionResultResponse)}
 \end{itemize}   
 
-The data key space is split into $namespaces$, each of which corresponds to the single cohort responsible for all keys in that range.  When the coordinator receives a \texttt{\\CommitAtomicTransaction} call from the client, it first sends \texttt{StartVoting} to the blockchain to trace the voting status from the cohorts. Then it decomposes the transaction into sub-transactions, which will be executed in the cohorts, based on the $namespace$ of each operation. After transaction decomposition, the coordinator sends \texttt{PrepareTransaction} requests with the sub-transactions to the cohorts. Different from the traditional 2PC protocol, we design our coordinator to delegate voting and coordination work to the blockchain. From here on, the coordinator no longer handles any work unless \texttt{GetTransactionResult} is requested from the client.
-
-When the client sends \texttt{GetTransactionResult} to the coordinator, the coordinator reads the transaction status from the blockchain. If the blockchain returns a PENDING or ABORTED status, the coordinator will return the status directly. If the transaction is COMMITTED, the coordinator will send requests to the cohorts to fetch the Get results and then return the status with the Get results. If not all cohorts return the Get results (e.g. due to crashes or network latency), the coordinator will send a partial response to the client with the ones that responded along with an indicator that the response is not yet complete.
-
-As described in the handling failures section, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information is also known by the client.
+As described in \ref{}, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information (e.g. list of cohorts involved in the transaction) is also known by the client.
 
 The data key space is split into \texttt{namespaces}, each of which corresponds to the single cohort responsible for all keys in that range. When the coordinator receives a \texttt{CommitAtomicTransaction()} call from the client, it first sends \texttt{StartVoting()} to the blockchain to track the voting status from the cohorts. Then it decomposes the transaction into sub-transactions, which will be executed in the cohorts, based on the namespace of each operation. After transaction decomposition, the coordinator sends \texttt{PrepareTransaction()} requests with the sub-transactions to the cohorts. Different from the traditional 2PC protocol, we design our coordinator to delegate voting and coordination work to the blockchain. From here on, the coordinator no longer handles any work unless \texttt{GetTransactionResult()} is requested from the client.
 
 When the client sends \texttt{GetTransactionResult()} to the coordinator, the coordinator reads the transaction status from the blockchain. If the blockchain returns a \texttt{PENDING} or \texttt{ABORTED} status, the coordinator will return the status directly. If the transaction is \texttt{COMMITTED}, the coordinator will send requests to the cohorts to fetch the \texttt{Get} results and then return the status with the \texttt{Get} results. If not all cohorts return the \texttt{Get} results (e.g. due to crashes or network latency), the coordinator will send a partial response to the client with the ones that responded along with an indicator that the response is not yet complete.
 
-As described in \ref{}, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information (e.g. list of cohorts involved in the transaction) is also known by the client.
+As described in \ref{blockchain}, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information (e.g. list of cohorts involved in the transaction) is also known by the client.
 
 \subsubsection{Cohort} \label{cohort}
 The cohort exposes two APIs to the coordinator:
