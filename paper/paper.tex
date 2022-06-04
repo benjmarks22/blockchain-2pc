@@ -112,8 +112,6 @@ The coordinator exposes two APIs to the clients:
   \item \texttt{GetTransactionResult( GetTransactionResultRequest, GetTransactionResultResponse)}
 \end{itemize}   
 
-As described in \ref{}, the coordinator does not need to persist any information to disk as all voting information is stored in the blockchain and all other information (e.g. list of cohorts involved in the transaction) is also known by the client.
-
 The data key space is split into \texttt{namespaces}, each of which corresponds to the single cohort responsible for all keys in that range. When the coordinator receives a \texttt{CommitAtomicTransaction()} call from the client, it first sends \texttt{StartVoting()} to the blockchain to track the voting status from the cohorts. Then it decomposes the transaction into sub-transactions, which will be executed in the cohorts, based on the namespace of each operation. After transaction decomposition, the coordinator sends \texttt{PrepareTransaction()} requests with the sub-transactions to the cohorts. Different from the traditional 2PC protocol, we design our coordinator to delegate voting and coordination work to the blockchain. From here on, the coordinator no longer handles any work unless \texttt{GetTransactionResult()} is requested from the client.
 
 When the client sends \texttt{GetTransactionResult()} to the coordinator, the coordinator reads the transaction status from the blockchain. If the blockchain returns a \texttt{PENDING} or \texttt{ABORTED} status, the coordinator will return the status directly. If the transaction is \texttt{COMMITTED}, the coordinator will send requests to the cohorts to fetch the \texttt{Get} results and then return the status with the \texttt{Get} results. If not all cohorts return the \texttt{Get} results (e.g. due to crashes or network latency), the coordinator will send a partial response to the client with the ones that responded along with an indicator that the response is not yet complete.
@@ -206,6 +204,8 @@ As part of a future effort, we can extend the system to tradeoff between further
 Currently the coordinator is stateless, so it is easy to add new coordinator servers, as long as each one handles a disjoint set of transactions. However, if a coordinator crashes, then clients cannot ask other coordinators for the Get responses of a transaction, since those coordinators will not know how to find the cohorts for the transaction. As part of a future effort, we could have the coordinators send each other the cohorts for each transaction so they can respond to client requests even if the original coordinator for that request crashes.
 
 \section{Reference}
+\bibliographystyle{plain}
+\bibliography{references}
 
 \section{Appendix} \label{appendix}
 \begin{table}[hbtp]
