@@ -5,7 +5,9 @@
 \usepackage{natbib}
 \setcitestyle{square, comma, numbers,sort&compress, super}
 \usepackage{amsmath,amssymb,amsfonts}
+\usepackage[toc,page]{appendix}
 \usepackage{algorithmic}
+\usepackage{fancyhdr}
 \usepackage{graphicx}
 \usepackage{hyperref}
 \usepackage{textcomp}
@@ -17,7 +19,6 @@ T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \AtBeginDocument{%
   \providecommand\BibTeX{{%
     \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
-
 
 \begin{document}
 
@@ -117,7 +118,7 @@ The blockchain component performs a 2PC protocol, so it’s responsible for trac
 
 We designed a \texttt{BlockchainAdapter} interface, which exposes the following APIs externally to the coordinator and the cohort:
 \begin{itemize}
-  \item \texttt{StartVoting(transaction\_id, cohorts, vote\_timeout\_time)}\\Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later. \texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
+  \item \texttt{StartVoting(transaction\_id, cohorts, vote\_timeout\_time)}\\Called by the coordinator to start voting on a transaction. \texttt{cohorts} is the number of cohorts that will vote on this transaction later.\\\texttt{vote\_timeout\_time} is the absolute time on the blockchain when the 2PC stops taking votes.
   \item \texttt{Vote(transaction\_id, cohort\_id, ballot)}\\Called by the cohort to vote \texttt{COMMIT} or \texttt{ABORT} on a transaction before timeout.
   \item \texttt{GetVotingDecision(transaction\_id)}\\Called by any component to check the voting state of a transaction.
 \end{itemize}
@@ -157,8 +158,8 @@ As described in \ref{blockchain}, the coordinator does not need to persist any i
 \subsubsection{Cohort} \label{cohort}
 The cohort exposes two APIs to the coordinator:
 \begin{itemize}
-  \item \texttt{PrepareTransaction(\\PrepareTransactionRequest, PrepareTransactionResponse)}
-  \item \texttt{GetTransactionResult(\\GetTransactionResultRequest, GetTransactionResultResponse)}
+  \item \texttt{PrepareTransaction(\\PrepareTransactionRequest,\\PrepareTransactionResponse)}
+  \item \texttt{GetTransactionResult(\\GetTransactionResultRequest,\\GetTransactionResultResponse)}
 \end{itemize} 
 
 The \texttt{PrepareTransactionRequest()} contains a \texttt{transaction\_id}, a list of operations of the sub-transaction and the vote timeout time, after which the blockchain will not accept votes. When a cohort receives a \texttt{PrepareTransaction()} request from the coordinator, it takes these steps: 
@@ -218,7 +219,7 @@ We implemented the coordinator and the cohorts with about 2800 lines of C++ code
 \subsubsection{Blockchain}
 We wrote our two-phase-commit smart contract with Solidity and developed it with Truffle \cite{github_truffle}. Truffle provided the development environment for us to compile smart contracts, test it, and deploy it locally for debugging. Once we deployed our smart contract, the coordinator and the cohorts interacted with the contract through a smart contract client library. However, we didn’t find a proper C++ smart contract client library to use, so we used a JavaScript library (web.js[ref]) instead and added an additional gRPC layer to translate to C++.
 
-While testing in the Truffle development, we learned the gas used for successfully committing a transaction with two cohorts is around 0.33 USD \cite{gwei} (see \ref{appendix} for breakdowns).
+While testing in the Truffle development, we learned the gas used for successfully committing a transaction with two cohorts is around 0.33 USD \cite{gwei} (see Appendix \ref{appendix:blockchaingas} for breakdowns).
 
 \subsubsection{Database}
 We designed the \texttt{DatabaseAdapter} interface and implemented the methods with LMDB primitives. LMDB provides process-oriented functions like \texttt{open()}, \texttt{begin()}, \texttt{commit()}, \texttt{put()}, \texttt{get()}. Our object-oriented C++ implementation has almost 500 lines of code. We chose LMDB because it is fast, lightweight and easy to test in memory. The interface is extensible to other databases like SQLite \cite{bhosale2015sqlite}.
@@ -242,25 +243,53 @@ Currently the coordinator is stateless, so it is easy to add new coordinator ser
 \bibliographystyle{unsrt}
 \bibliography{references}
 
-\appendix
-\label{appendix}
-\begin{table}[hbtp]
-  \centering
-  \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
-  \label{table:cost}
-  \begin{tabular}{|l|c|c|c|}
-    \hline
+% \appendix
+% \begin{table}[hbtp]
+  % \centering
+  % \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
+  % \label{table:cost}
+  % \begin{tabular}{|p{1.8cm}|p{1.8cm}|p{2cm}|p{1.8cm}|}
+    % \hline
+          % & Gas Used (Gwei) &  Cost in ETH & Cost in USD \\
+          % \hline
+    % StartVoting &73441 &0.000073441 & 0.143\\
+    % \hline
+    % Vote 1 &56451	&0.000056451 &0.110\\
+    % \hline
+    % Vote 2 &39513 &0.000039513 &0.077\\
+    % \hline
+    % Total &169405 &0.000169405 &0.330\\
+    % \hline
+  % \end{tabular}
+% \label{blockchaingas}
+% \end{table}
+
+\begin{appendices}
+
+  \section{Blockchain Gas Used}
+  \label{appendix:blockchaingas}
+
+  \begin{table}[hbtp]
+    \centering
+    \caption{Gas used, cost in ETH/USD per blockchain transaction for a successful 2PC commit with 2 cohorts. Data as of 2022/05/30.}
+    \label{table:cost}
+    \begin{tabular}{|p{1.8cm}|p{1.8cm}|p{2cm}|p{1.8cm}|}
+      \hline
           & Gas Used (Gwei) &  Cost in ETH & Cost in USD \\
           \hline
-    StartVoting &73441 &0.000073441 & 0.143\\
-    \hline
-    Vote 1 &56451	&0.000056451 &0.110\\
-    \hline
-    Vote 2 &39513 &0.000039513 &0.077\\
-    \hline
-    Total &169405 &0.000169405 &0.330\\
-    \hline
-  \end{tabular}
-\end{table}
+      StartVoting &73441 &0.000073441 & 0.143\\
+      \hline
+      Vote 1 &56451	&0.000056451 &0.110\\
+      \hline
+      Vote 2 &39513 &0.000039513 &0.077\\
+      \hline
+      Total &169405 &0.000169405 &0.330\\
+      \hline
+    \end{tabular}
+  \end{table}
+
+\end{appendices}
+
+
 \end{document}
 \endinput
