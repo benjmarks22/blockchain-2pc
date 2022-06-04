@@ -76,9 +76,17 @@ We can plug any blockchain, regardless of whether it is public/permissionless or
 We design our coordinator to be light-weight to handle high throughput and to be horizontally scalable. This is achieved by delegating coordination and voting work to the blockchain. The delegation makes the coordinator stateless and allows many coordinator jobs to co-exist to balance the load and tolerate job failures. Adding a cohort to the system is as simple as making potential clients aware of the address of the newly added cohort, so our system is horizontally scalable.
 
 \subsubsection{Reliability}
-Our system has better reliability than the traditional 2PC protocol for two reasons. First, the system leverages the blockchain to maintain the coordination state. The stateless coordinator can easily recover as long as it knows the participating cohorts. Second, The coordinator is stateless and horizontally scalable. We can keep multiple jobs running concurrently and place a load-balancing layer on top of it to be tolerant of individual coordinator node failures.
+Our system has better reliability than the traditional 2PC protocol for two reasons. First, the system leverages the blockchain to maintain the coordination state. The stateless coordinator can easily recover as long as it knows the participating cohorts. Second, the coordinator is stateless and horizontally scalable. We can keep multiple jobs running concurrently and place a load-balancing layer on top of it to be tolerant of individual coordinator node failures.
 
 \section{Design Overview}
+
+\begin{figure*}
+  \centering
+  \includegraphics[width=\textwidth]{./diagram.pdf}
+  \caption{This diagram displays the main components within our architecture and example steps of successfully committing a transaction.}
+  \label{fig:flow}
+\end{figure*}
+
 \subsection{Architecture and Components} \label{components}
 
 We define a transaction as a list of operations starting with \texttt{Begin()} followed by multiple \texttt{Get()} or \texttt{Put()} and ending with \texttt{Commit()}. The client creates a transaction and requests the coordinator to commit. The coordinator distributes the transaction to the corresponding cohorts to prepare and then offloads the remaining 2PC responsibility to the blockchain. Each cohort prepares the transaction locally, votes to the blockchain if ready, checks on the blockchain to see if a transaction should be committed, and finally commits the transaction to its database.
@@ -86,13 +94,6 @@ We define a transaction as a list of operations starting with \texttt{Begin()} f
 The architecture is similar to the traditional 2PC architecture where we have one coordinator and multiple cohorts - except each cohort talks to the blockchain directly to vote and to look up the voting decision as the coordinator offloads the 2PC voting responsibility to the blockchain.
 
 We describe the details of each component in the remaining \ref{components}, the complete flow of handling a successful transaction in \ref{txnflow}, and how we handle failures in \ref{failurecases}.
-
-\begin{figure*}
-  \centering
-  \includegraphics[width=\textwidth]{./diagram.pdf}
-  \caption{This diagram displays the main components within our architecture and example steps of successfully committing a transaction.}
-  \label{fig:Panel}
-\end{figure*}
 
 \subsubsection{Blockchain} \label{blockchain}
 
@@ -118,13 +119,13 @@ We designed a \texttt{BlockchainAdapter} interface, which exposes the following 
 \end{enumerate}
 
 \subsubsection{Database} \label{database}
-The database component is responsible for committing sub-transactions in each cohort and abstracts typical ACID databases with 5 APIs in a \texttt{DatabaseAdapter:} 
+The database component is responsible for committing sub-transactions in each cohort and abstracts typical ACID databases with five APIs in a \texttt{DatabaseAdapter:} 
 \begin{itemize}
   \item \texttt{Begin()} starts a transaction.
   \item \texttt{Commit()} commits a started transaction.
   \item \texttt{Abort()} aborts a started transaction.
-  \item \texttt{Put(key, value)} puts value in a row whose primary key is key.
-  \item \texttt{Get(key)} gets the value from the row whose primary key is key.
+  \item \texttt{Put(key, value)} puts value in a row whose primary key is \texttt{key}.
+  \item \texttt{Get(key)} gets the value from the row whose primary key is \texttt{key}.
 \end{itemize}
 
 We require the underlying database to be ACID because the database can handle locks and transactions natively without requiring cohorts to implement complicated locking logic for \texttt{Put} and \texttt{Get} operations. However, for databases that only support weak snapshot isolation (e.g. LMDB \cite{henry2019howard}), the cohort needs a single write lock to prevent other write transactions to be started to make sure that transactions are serialized. 
@@ -170,13 +171,13 @@ When the cohort receives a \texttt{GetTransactionResult()} request and has commi
 
 \subsection{System Interactions (a.k.a Life of a Transaction)} \label{txnflow}
 
-This section describes the end-to-end life of a transaction without handling failures.
+This section and Figure \ref{fig:flow} describe the end-to-end life of a transaction without failures.
 
 \begin{enumerate}
   \item The client composes a transaction request and passes it to the coordinator through \texttt{CommitAomticTransaction()}. The coordinator returns a transaction ID for the client to look up the transaction result later.
   \item The coordinator asks the blockchain to trace votes for the new transaction through \texttt{Start-Voting()}.
   \item The coordinator decomposes the transaction into sub-transactions and distributes them to the corresponding cohort through \texttt{PrepareTransaction()}.
-  \item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before Commit(). The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{Get} operation results to disk for faster responses after a crash and recovery.
+  \item Each cohort executes a sub-transaction by acquiring locks and forwarding the operations to the database up to the point before \texttt{Commit()}. The cohort writes an entry to the redo log to recover in case it crashes. Additionally, the cohort writes the \texttt{Get} operation results to disk for faster responses after a crash and recovery.
   \item The cohort votes to the blockchain through \texttt{Vote()} indicating that it wants to commit or abort the transaction.
   \item The cohort waits until the expected transaction vote timeout time and gets the voting decision from the blockchain through \texttt{GetVotingDecision()}.
   \item If the voting decision is to commit the transaction, the cohort commits the sub-transaction onto the database and releases any acquired locks; otherwise, it aborts the sub-transaction in the database and releases any acquired locks.
@@ -198,7 +199,7 @@ Our system is also resilient to crashes of cohorts, as these crashes do not caus
 We use Ethereum for our blockchain implementation. According to \cite{stationlong}, it takes around 15 seconds to 5 minutes to process a blockchain transaction on Ethereum, which indicates that the blockchain is relatively slow compared to other components within our system. A slow blockchain increases the likelihood that not all commit votes can be collected before the vote timeout time, which leads to more transactions to abort eventually; however, the blockchain slowness doesn’t affect the promised atomicity. The client or the coordinator can specify a longer vote timeout time if needed.
 
 \section{Implementation}
-In this section we first describe the implementation of our overall system. Then, we illustrate the implementation of individual components. The source code of our implementation is available at licensed under GNU Lesser General Public License \cite{lgpl}. Our implementation depends on the following libraries: truffle \cite{github_truffle}, ganache \cite{github_ganache}, sqlite3 \cite{github_sqlite3}, grpc \cite{github_grpc}, web3 \cite{github_web3}, abseil-cpp \cite{github_absl}, rule\_nodejs \cite{github_rulejs}, gflags \cite{github_gflags}, glog \cite{github_glog}, openssl \cite{github_openssl}, threadpool \cite{Shoshany2021_ThreadPool}, lmdb \cite{github_lmdb}, and lmdbxx \cite{github_lmdbxx}.
+In this section we first describe the implementation of our overall system. Then, we illustrate the implementation of individual components. The source code of our implementation is available at \cite{our_code} licensed under GNU Lesser General Public License \cite{lgpl}. Our implementation depends on the following libraries: truffle \cite{github_truffle}, ganache \cite{github_ganache}, sqlite3 \cite{github_sqlite3}, grpc \cite{github_grpc}, web3 \cite{github_web3}, abseil-cpp \cite{github_absl}, rule\_nodejs \cite{github_rulejs}, gflags \cite{github_gflags}, glog \cite{github_glog}, openssl \cite{github_openssl}, threadpool \cite{Shoshany2021_ThreadPool}, lmdb \cite{github_lmdb}, and lmdbxx \cite{github_lmdbxx}.
 
 \subsection{Environment}
 We implemented the coordinator and the cohorts with about 2800 lines of C++ code. For communications between components, we used gRPC \cite{github_grpc} and ProtoBuf \cite{github_proto}. For providing the extensibility of swapping different database and blockchain implementations, we provided generic interfaces. We tested end-to-end behaviors on a single machine with different processes simulating each component.
