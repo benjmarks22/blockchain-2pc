@@ -1,6 +1,9 @@
-\documentclass[11pt,conference]{IEEEtran}
-\IEEEoverridecommandlockouts
-\usepackage[sort,nocompress]{cite}
+\documentclass[11pt,sigplan,screen,nonacm]{acmart}
+% \documentclass[11pt,conference]{IEEEtran}
+% \IEEEoverridecommandlockouts
+% \usepackage[sort,nocompress]{cite}
+\usepackage{natbib}
+\setcitestyle{square, comma, numbers,sort&compress, super}
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{algorithmic}
 \usepackage{graphicx}
@@ -11,33 +14,65 @@
 \usepackage[htt]{hyphenat}
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
 T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\AtBeginDocument{%
+  \providecommand\BibTeX{{%
+    \normalfont B\kern-0.5em{\scshape i\kern-0.25em b}\kern-0.8em\TeX}}}
+
 
 \begin{document}
 
 \title{Two-Phase Commit Using Blockchain}
 
-\author{\IEEEauthorblockN{Benjamin Marks}
-  \IEEEauthorblockA{\textit{Stanford University} \\
-  benmarks@stanford.edu}
-  \and
-  \IEEEauthorblockN{Heron Yang}
-  \IEEEauthorblockA{\textit{Stanford University} \\
-  heronyang@stanford.edu}
-  \and
-  \IEEEauthorblockN{Yuewei Na}
-  \IEEEauthorblockA{\textit{Stanford University} \\
-  yueweina@stanford.edu}
+\author{Benjamin Marks}
+\affiliation{%
+  \institution{Stanford University}
+  \city{Stanford}
+  \state{California}
+  \country{USA}
 }
+\email{benmarks@stanford.edu}
 
-\maketitle
+\author{Heron Yang}
+\affiliation{%
+  \institution{Stanford University}
+  \city{Stanford}
+  \state{California}
+  \country{USA}
+}
+\email{heronyang@stanford.edu}
+
+\author{Yuewei Na}
+\affiliation{%
+  \institution{Stanford University}
+  \city{Stanford}
+  \state{California}
+  \country{USA}
+}
+\email{yueweina@stanford.edu}
+
+% \author{\IEEEauthorblockN{Benjamin Marks}
+  % \IEEEauthorblockA{\textit{Stanford University} \\
+  % benmarks@stanford.edu}
+  % \and
+  % \IEEEauthorblockN{Heron Yang}
+  % \IEEEauthorblockA{\textit{Stanford University} \\
+  % heronyang@stanford.edu}
+  % \and
+  % \IEEEauthorblockN{Yuewei Na}
+  % \IEEEauthorblockA{\textit{Stanford University} \\
+  % yueweina@stanford.edu}
+% }
 
 \begin{abstract}
   We created a decentralized system that uses a public blockchain as a two-phase commit (2PC) coordinator, so users can securely commit an atomic transaction across any databases that support our interface. Users treat our system as one large database with ACID, despite being composed of many individual databases that are unaware of each other’s existence. By using a blockchain as a coordinator, it is resilient to failures such as network outages, power outages, and disk failures that cause traditional 2PC implementations to block. Our initial integration is with the Ethereum blockchain and LMDB databases; however, our system provides a generic interface to integrate with other blockchains and databases.
 \end{abstract}
 
-\begin{IEEEkeywords}
-  Atomic Commit, Blockchain, Smart Contract, Distributed System, Database Transaction.
-\end{IEEEkeywords}
+\maketitle
+
+% \begin{IEEEkeywords}
+  % Atomic Commit, Blockchain, Smart Contract, Distributed System, Database Transaction.
+% \end{IEEEkeywords}
+\keywords{atomic commit, blockchain, smart contract, distributed system, database transaction}
 
 \section{Introduction}
 Two-Phase Commit (2PC) is a widely-adopted protocol that allows distributed systems to reach the consensus of distributed transactions. It ensures that the transaction can be either committed or aborted at all distributed machines. However, blocking is proven \cite{skeen1981nonblocking} to be to be inevitable even in synchronous systems where bounds on delays can be reliably estimated. 
@@ -58,7 +93,7 @@ Our system has better reliability than the traditional 2PC protocol for two reas
 \section{Design Overview}
 \subsection{Architecture and Components} \label{components}
 
-We define a transaction as a list of operations starting with \texttt{Begin} followed by multiple \texttt{Get} or \texttt{Put} and ending with \texttt{Commit}. The client creates a transaction and requests the coordinator to commit. The coordinator distributes the transaction to the corresponding cohorts to prepare and then offloads the remaining 2PC responsibility to the blockchain. Each cohort prepares the transaction locally, votes to the blockchain if ready, checks on the blockchain to see if a transaction should be committed, and finally commits the transaction to its database.
+We define a transaction as a list of operations starting with \texttt{Begin()} followed by multiple \texttt{Get()} or \texttt{Put()} and ending with \texttt{Commit()}. The client creates a transaction and requests the coordinator to commit. The coordinator distributes the transaction to the corresponding cohorts to prepare and then offloads the remaining 2PC responsibility to the blockchain. Each cohort prepares the transaction locally, votes to the blockchain if ready, checks on the blockchain to see if a transaction should be committed, and finally commits the transaction to its database.
 
 The architecture is similar to the traditional 2PC architecture where we have one coordinator and multiple cohorts - except each cohort talks to the blockchain directly to vote and to look up the voting decision as the coordinator offloads the 2PC voting responsibility to the blockchain.
 
