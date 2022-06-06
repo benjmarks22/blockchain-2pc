@@ -18,7 +18,6 @@ module.exports = class TwoPhaseCommitClient {
         .startVoting(transaction_id, cohorts, vote_timeout_time)
         .send({from: from_addr})
         .then(function(receipt) {
-          console.log('StartVoting Receipt', receipt);
           on_success_callback();
         })
         .catch(function(e) {
@@ -30,11 +29,10 @@ module.exports = class TwoPhaseCommitClient {
     this.contract.methods.vote(transaction_id, cohort_id, ballot)
         .send({from: from_addr})
         .then(function(receipt) {
-          console.log('Vote Receipt', receipt);
           on_success_callback();
         })
         .catch(function(e) {
-          console.log('Vote Error', e);
+          console.log('Failed to vote');
         });
   }
 

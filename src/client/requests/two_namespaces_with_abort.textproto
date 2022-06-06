@@ -10,15 +10,26 @@ initial_transaction {
     }
     op {
         type: OP_TYPE_PUT
-        address: "0.0.0.0:60001"
-        key: "foo"
-        relative_value: 5
-    }
-    op {
-        type: OP_TYPE_PUT
         address: "0.0.0.0:60002"
         key: "bar"
         value: 5
+    }
+}
+initial_transaction {
+    # Should abort since the "not-found" key does not exist.
+    time_before_abort {
+        seconds: 2
+    }
+    op {
+        type: OP_TYPE_PUT
+        address: "0.0.0.0:60001"
+        key: "foo"
+        value: 7
+    }
+    op {
+        type: OP_TYPE_GET
+        address: "0.0.0.0:60002"
+        key: "not-found"
     }
 }
 initial_transaction {
@@ -29,10 +40,12 @@ initial_transaction {
         type: OP_TYPE_GET
         address: "0.0.0.0:60001"
         key: "foo"
+        # Should be 3.
     }
     op {
         type: OP_TYPE_GET
         address: "0.0.0.0:60002"
         key: "bar"
+        # Should be 5.
     }
 }

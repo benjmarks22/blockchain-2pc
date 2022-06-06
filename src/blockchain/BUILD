@@ -102,7 +102,7 @@ command(
         "$(location @blockchain_npm//truffle/bin:truffle)",
         "$(location @blockchain_npm//ganache/bin:ganache)",
     ],
-    command = ":deploy_ganache_with_console",
+    command = ":deploy_ganache_without_console",
     data = [
         ":truffle-config",
         "//src/blockchain/contracts",
@@ -111,6 +111,29 @@ command(
         "@blockchain_npm//truffle/bin:truffle",
     ],
     visibility = ["//visibility:public"],
+)
+
+sh_binary(
+    name = "deploy_ganache_without_console",
+    srcs = [
+        "deploy_ganache_without_console.sh",
+    ],
+    args = [
+        "$(location :truffle-config)",
+        "$(location @blockchain_npm//truffle/bin:truffle)",
+        "$(location @blockchain_npm//ganache/bin:ganache)",
+    ],
+    data = [
+        ":truffle-config",
+        "//src/blockchain/contracts",
+        "//src/blockchain/migrations",
+        "@blockchain_npm//ganache/bin:ganache",
+        "@blockchain_npm//truffle/bin:truffle",
+    ],
+    deps = [
+        ":deploy_ganache",
+        "@bazel_tools//tools/bash/runfiles",
+    ],
 )
 
 sh_binary(

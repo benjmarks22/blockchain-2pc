@@ -1,0 +1,1 @@
+bazel run //src/cohort:start_cohort_with_blockchain_adapter_server -- --adapter_server_port=60502 -- --port=60002 --db_data_dir=/tmp/data_60002 --db_txn_response_dir=/tmp/txn_responses_6000

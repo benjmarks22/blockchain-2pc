@@ -34,12 +34,18 @@ do
   esac
   shift
 done
+port=58000
 while [ $# -gt 0 ]
 do
+  case "$1" in
+    --port*) port=${1#*=};;
+  esac
   coordinator_server_args+=" $1"
   shift
 done
 adapter_server_args+=" --adapter_server_port=$adapter_server_port"
 coordinator_server_args+=" --blockchain_adapter_port=$adapter_server_port"
+fuser -k $port/tcp && sleep 1s
+fuser -k $adapter_server_port/tcp && sleep 1s
 $(rlocation __main__/src/blockchain/client/run_adapter_server_command.bash) $adapter_server_args
-$(rlocation __main__/src/coordinator/coordinator_server_main) $coordinator_server_args &
+$(rlocation __main__/src/coordinator/coordinator_server_main) $coordinator_server_args

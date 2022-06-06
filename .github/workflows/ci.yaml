@@ -149,3 +149,28 @@ jobs:
     - name: Run e2e test
       run: |
         bazel run src/client:end_to_end_test two_namespaces_simple
+
+  demo:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2    
+
+    - name: Mount bazel cache
+      uses: actions/cache@v3
+      with:
+        path: "/home/runner/.cache/bazel"
+        key: bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}-${{ hashFiles('./src/blockchain/yarn.lock')}}
+        restore-keys: |
+          bazel_${{ hashFiles('./WORKSPACE')}}-${{ hashFiles('.bazelrc')}}
+          bazel_${{ hashFiles('./WORKSPACE')}}
+          bazel_
+
+    - name: Run demo
+      run: |
+        ./demo/start_blockchain.sh &
+        sleep 10s
+        ./demo/start_cohort1.sh &
+        ./demo/start_cohort2.sh &
+        ./demo/start_coordinator.sh &
+        ./demo/start_client.sh
