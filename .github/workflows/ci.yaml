@@ -168,9 +168,9 @@ jobs:
 
     - name: Run demo
       run: |
-        ./start_blockchain.sh &
+        ./demo/start_blockchain.sh &
         sleep 10s
-        ./start_cohort1.sh &
-        ./start_cohort2.sh &
-        ./start_coordinator.sh &
-        ./start_client.sh
+        ./demo/start_cohort1.sh &
+        ./demo/start_cohort2.sh &
+        ./demo/start_coordinator.sh &
+        ./demo/start_client.sh
