@@ -6,6 +6,7 @@
 #include "absl/container/flat_hash_map.h"
 #include "absl/container/flat_hash_set.h"
 #include "absl/flags/flag.h"
+#include "absl/flags/parse.h"
 #include "absl/status/statusor.h"
 #include "absl/strings/escaping.h"
 #include "absl/strings/str_cat.h"
@@ -22,7 +23,7 @@
 
 ABSL_FLAG(std::string, coordinator_port, "58000",
           "Port to send requests to the coordinator");
-ABSL_FLAG(std::string, request_file_prefix, "two_namespaces_simple",
+ABSL_FLAG(std::string, request_file_prefix, "",
           "Prefix of filename with requests to send to the coordinator");
 
 struct RunInfo {
@@ -206,8 +207,13 @@ void SendRequests(
                           grpc::InsecureChannelCredentials()));
   client.WaitForCoordinator();
   std::vector<std::future<client::ResponseOrStatus>> futures;
+  bool first_request = true;
   for (std::pair<coordinator::CommitAtomicTransactionRequest, bool>& request :
        requests) {
+    if (!first_request) {
+      std::this_thread::sleep_for(absl::ToChronoSeconds(absl::Seconds(5)));
+    }
+    first_request = false;
     if (request.first.config().has_presumed_abort_time()) {
       request.first.mutable_config()
           ->mutable_presumed_abort_time()
@@ -225,8 +231,9 @@ void SendRequests(
   }
 }
 
-int main(int /*argc*/, char** /*argv*/) {
+int main(int argc, char** argv) {
   try {
+    absl::ParseCommandLine(argc, argv);
     absl::StatusOr<RunInfo> run_info = CreateRunInfoFromFile(
         absl::StrCat("src/client/requests/",
                      absl::GetFlag(FLAGS_request_file_prefix), ".textproto"));

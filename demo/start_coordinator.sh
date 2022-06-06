@@ -1,0 +1,1 @@
+bazel run //src/coordinator:start_coordinator_with_blockchain_adapter_server -- --adapter_server_port=58600 -- --port=58000

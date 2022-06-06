@@ -57,7 +57,6 @@ function vote(call, callback) {
 }
 
 function getVotingDecision(call, callback) {
-  console.log('Received: getVotingDecision', call.request);
   contractClient.getVotingDecision(call.request.transaction_id, (result) => {
     console.log('Decision', result);
     var decision = 'VOTING_DECISION_UNKNOWN';
@@ -93,7 +92,6 @@ function main() {
     getVotingDecision: getVotingDecision,
     getHeartBeat: getHeartBeat
   });
-  console.log('Starting server')
   server.bindAsync(
       '0.0.0.0:' + port, grpc.ServerCredentials.createInsecure(), () => {
         server.start();

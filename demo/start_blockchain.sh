@@ -1,0 +1,1 @@
+ bazel run //src/blockchain:deploy_ganache_command

@@ -25,7 +25,7 @@ $compile_script $1 $2
 shift
 shift
 adapter_server=$(rlocation __main__/src/blockchain/client/adapter_server_command.bash)
-contract_address=''
+contract_address='0xCfEB869F69431e42cdB54A4F4f105C19C080A601'
 adapter_server_port=61362
 # Don't change this since it's the first one in the deterministic ganache client.
 account='0x90F8bf6A479f320ead074411a4B0e7944Ea8c9C1'
